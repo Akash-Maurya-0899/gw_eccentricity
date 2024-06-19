@@ -603,9 +603,15 @@ class eccDefinition:
         # to compute location at certain number orbits earlier than merger
         # and to rescale amp22 by it's value at the merger (in AmplitudeFits)
         # respectively.
-        t_merger = peak_time_via_quadratic_fit(
-            newDataDict["t"], amplitude_using_all_modes(newDataDict["amplm"], "amplm")
-        )[0]
+
+        if extra_kwargs is not None and extra_kwargs["inspiral_only"]:
+            t_merger = newDataDict["t"][-1]
+        else:
+            t_merger = peak_time_via_quadratic_fit(
+                newDataDict["t"],
+                amplitude_using_all_modes(newDataDict["amplm"], "amplm"),
+            )[0]
+
         merger_idx = np.argmin(np.abs(newDataDict["t"] - t_merger))
         amp22_merger = newDataDict["amplm"][(2, 2)][merger_idx]
         phase22 = newDataDict["phaselm"][(2, 2)]
