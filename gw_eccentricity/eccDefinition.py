@@ -22,8 +22,9 @@ from .plot_settings import figWidthsTwoColDict, figHeightsDict
 class eccDefinition:
     """Base class to define eccentricity for given waveform data dictionary."""
 
-    def __init__(self, dataDict, num_orbits_to_exclude_before_merger=2,
-                 extra_kwargs=None):
+    def __init__(
+        self, dataDict, num_orbits_to_exclude_before_merger=2, extra_kwargs=None
+    ):
         """Init eccDefinition class.
 
         parameters:
@@ -261,37 +262,46 @@ class eccDefinition:
                 USE THIS WITH CAUTION!
         """
         # Get data necessary for eccentricity measurement
-        self.dataDict, self.t_merger, self.amp22_merger, \
-            min_width_for_extrema = self.process_data_dict(
-                dataDict, num_orbits_to_exclude_before_merger, extra_kwargs)
+        self.dataDict, self.t_merger, self.amp22_merger, min_width_for_extrema = (
+            self.process_data_dict(
+                dataDict, num_orbits_to_exclude_before_merger, extra_kwargs
+            )
+        )
         self.t = self.dataDict["t"]
         # check if the time steps are equal, the derivative function
         # requires uniform time steps
         self.t_diff = np.diff(self.t)
         if not np.allclose(self.t_diff, self.t_diff[0]):
-            raise Exception("Input time array must have uniform time steps.\n"
-                            f"Time steps are {self.t_diff}")
+            raise Exception(
+                "Input time array must have uniform time steps.\n"
+                f"Time steps are {self.t_diff}"
+            )
         # get amplitude, phase and omega of 22 mode
         self.amp22 = self.dataDict["amplm"][(2, 2)]
         self.phase22 = self.dataDict["phaselm"][(2, 2)]
         self.omega22 = self.dataDict["omegalm"][(2, 2)]
         # Sanity check various kwargs and set default values
         self.extra_kwargs = check_kwargs_and_set_defaults(
-            extra_kwargs, self.get_default_extra_kwargs(),
+            extra_kwargs,
+            self.get_default_extra_kwargs(),
             "extra_kwargs",
-            "eccDefinition.get_default_extra_kwargs()")
+            "eccDefinition.get_default_extra_kwargs()",
+        )
         self.extrema_finding_kwargs = check_kwargs_and_set_defaults(
-            self.extra_kwargs['extrema_finding_kwargs'],
+            self.extra_kwargs["extrema_finding_kwargs"],
             self.get_default_extrema_finding_kwargs(min_width_for_extrema),
             "extrema_finding_kwargs",
-            "eccDefinition.get_default_extrema_finding_kwargs()")
+            "eccDefinition.get_default_extrema_finding_kwargs()",
+        )
         self.spline_kwargs = check_kwargs_and_set_defaults(
             self.extra_kwargs["spline_kwargs"],
             get_default_spline_kwargs(),
             "spline_kwargs",
-            "utils.get_default_spline_kwargs()")
-        self.available_averaging_methods \
-            = self.get_available_omega22_averaging_methods()
+            "utils.get_default_spline_kwargs()",
+        )
+        self.available_averaging_methods = (
+            self.get_available_omega22_averaging_methods()
+        )
         self.debug_level = self.extra_kwargs["debug_level"]
         self.debug_plots = self.extra_kwargs["debug_plots"]
         self.set_failures_to_zero = self.extra_kwargs["set_failures_to_zero"]
@@ -301,7 +311,8 @@ class eccDefinition:
             if kw not in self.recognized_dataDict_keys:
                 debug_message(
                     f"kw {kw} is not a recognized key word in dataDict.",
-                    debug_level=self.debug_level)
+                    debug_level=self.debug_level,
+                )
         # Measured values of eccentricities to perform diagnostic checks.  For
         # example to plot ecc vs time plot, or checking monotonicity of
         # eccentricity as a function of time. These are values of
@@ -335,14 +346,14 @@ class eccDefinition:
     def get_recognized_dataDict_keys(self):
         """Get the list of recognized keys in dataDict."""
         list_of_keys = [
-            "t",                # time array of waveform modes
-            "hlm",              # Dict of eccentric waveform modes
-            "amplm",            # Dict of amplitude of eccentric waveform modes
-            "phaselm",          # Dict of phase of eccentric waveform modes
-            "omegalm",          # Dict of omega of eccentric waveform modes
-            "t_zeroecc",        # time array of quasicircular waveform
-            "hlm_zeroecc",      # Dict of quasicircular waveform modes
-            "amplm_zeroecc",    # Dict of amplitude of quasicircular waveform modes
+            "t",  # time array of waveform modes
+            "hlm",  # Dict of eccentric waveform modes
+            "amplm",  # Dict of amplitude of eccentric waveform modes
+            "phaselm",  # Dict of phase of eccentric waveform modes
+            "omegalm",  # Dict of omega of eccentric waveform modes
+            "t_zeroecc",  # time array of quasicircular waveform
+            "hlm_zeroecc",  # Dict of quasicircular waveform modes
+            "amplm_zeroecc",  # Dict of amplitude of quasicircular waveform modes
             "phaselm_zeroecc",  # Dict of phase of quasicircular waveform modes
             "omegalm_zeroecc",  # Dict of omega of quasicircular waveform modes
         ]
@@ -387,22 +398,28 @@ class eccDefinition:
         else:
             # compute it from phaselm that is already in amp_phase_omega_dict
             amp_phase_omega_dict.update(
-                {"omegalm": self.get_omegalm_from_phaselm(
-                    dataDict["t"],
-                    amp_phase_omega_dict["phaselm"])})
+                {
+                    "omegalm": self.get_omegalm_from_phaselm(
+                        dataDict["t"], amp_phase_omega_dict["phaselm"]
+                    )
+                }
+            )
 
         # add omegalm_zeroecc if zeroecc data is provided
         if "omegalm_zeroecc" in dataDict:
             amp_phase_omega_dict.update(
-                {"omegalm_zeroecc": dataDict["omegalm_zeroecc"]})
+                {"omegalm_zeroecc": dataDict["omegalm_zeroecc"]}
+            )
         # Look for zeroecc phaselm is amp_phase_omega_dict and compute
         # omegalm_zeroecc from it if phaselm_zeroecc is present
-        elif "phaselm_zeroecc" in amp_phase_omega_dict \
-             and "t_zeroecc" in dataDict:
+        elif "phaselm_zeroecc" in amp_phase_omega_dict and "t_zeroecc" in dataDict:
             amp_phase_omega_dict.update(
-                {"omegalm_zeroecc": self.get_omegalm_from_phaselm(
-                    dataDict["t_zeroecc"],
-                    amp_phase_omega_dict["phaselm_zeroecc"])})
+                {
+                    "omegalm_zeroecc": self.get_omegalm_from_phaselm(
+                        dataDict["t_zeroecc"], amp_phase_omega_dict["phaselm_zeroecc"]
+                    )
+                }
+            )
         return amp_phase_omega_dict
 
     def get_amplm_from_dataDict(self, dataDict):
@@ -421,9 +438,11 @@ class eccDefinition:
                 for k in dataDict["hlm" + suffix]:
                     ampDict.update({k: np.abs(dataDict["hlm" + suffix][k])})
             elif suffix == "":
-                raise Exception("`dataDict` should contain either 'amplm' or "
-                                " 'hlm' for computing amplitude of the "
-                                "waveform modes.")
+                raise Exception(
+                    "`dataDict` should contain either 'amplm' or "
+                    " 'hlm' for computing amplitude of the "
+                    "waveform modes."
+                )
         amplmDict = {"amplm": amplm}
         if amplm_zeroecc:
             amplmDict.update({"amplm_zeroecc": amplm_zeroecc})
@@ -437,8 +456,7 @@ class eccDefinition:
         """
         phaselm = {}
         phaselm_zeroecc = {}
-        for suffix, phaseDict in zip(["", "_zeroecc"],
-                                     [phaselm, phaselm_zeroecc]):
+        for suffix, phaseDict in zip(["", "_zeroecc"], [phaselm, phaselm_zeroecc]):
             if "phaselm" + suffix in dataDict:
                 # Add the phase dictionary from dataDict to phaseDict
                 phaseDict.update(dataDict["phaselm" + suffix])
@@ -446,12 +464,14 @@ class eccDefinition:
                 # Compute phase of each mode in hlm and add to phaselm
                 for k in dataDict["hlm" + suffix]:
                     phaseDict.update(
-                        {k: - np.unwrap(
-                            np.angle(dataDict["hlm" + suffix][k]))})
+                        {k: -np.unwrap(np.angle(dataDict["hlm" + suffix][k]))}
+                    )
             elif suffix == "":
-                raise Exception("`dataDict` should contain either 'phaselm' "
-                                "or 'hlm' for computing phase of the waveform "
-                                "modes.")
+                raise Exception(
+                    "`dataDict` should contain either 'phaselm' "
+                    "or 'hlm' for computing phase of the waveform "
+                    "modes."
+                )
         phaselmDict = {"phaselm": phaselm}
         if phaselm_zeroecc:
             phaselmDict.update({"phaselm_zeroecc": phaselm_zeroecc})
@@ -467,10 +487,9 @@ class eccDefinition:
             omegalm[mode] = time_deriv_4thOrder(phaselm[mode], t[1] - t[0])
         return omegalm
 
-    def process_data_dict(self,
-                          dataDict,
-                          num_orbits_to_exclude_before_merger,
-                          extra_kwargs):
+    def process_data_dict(
+        self, dataDict, num_orbits_to_exclude_before_merger, extra_kwargs
+    ):
         """Get necessary data for eccentricity measurement from `dataDict`.
 
         To measure the eccentricity, several waveform data are required,
@@ -535,32 +554,39 @@ class eccDefinition:
         # Raise exception if hlm is provided and amplm and/or phaselm is also
         # provided.
         for suffix in ["", "_zeroecc"]:
-            if ("hlm"+suffix in dataDict) and any(
-                    ["amplm"+suffix in dataDict,
-                     "phaselm"+suffix in dataDict]):
+            if ("hlm" + suffix in dataDict) and any(
+                ["amplm" + suffix in dataDict, "phaselm" + suffix in dataDict]
+            ):
                 raise Exception(
                     f"`dataDict` {'should' if suffix == '' else 'may'} "
                     "contain one of the following: \n"
                     f"1. 'hlm{suffix}' OR \n"
                     f"2. 'amplm{suffix}' and 'phaselm{suffix}'\n"
-                    "But not both 1. and 2. at the same time.")
+                    "But not both 1. and 2. at the same time."
+                )
         # Raise exception if hlm is not provided but either amplm and/or
         # phaselm is also not provided
-        if ("hlm" not in dataDict) and any(["amplm" not in dataDict,
-                                            "phaselm" not in dataDict]):
-            raise Exception((
-                "`dataDict` should contain one of the following: \n"
-                "1. 'hlm' OR \n"
-                "2. 'amplm' and 'phaselm'\n"
-                "But not both 1. and 2. at the same time."))
+        if ("hlm" not in dataDict) and any(
+            ["amplm" not in dataDict, "phaselm" not in dataDict]
+        ):
+            raise Exception(
+                (
+                    "`dataDict` should contain one of the following: \n"
+                    "1. 'hlm' OR \n"
+                    "2. 'amplm' and 'phaselm'\n"
+                    "But not both 1. and 2. at the same time."
+                )
+            )
         # Create a new dictionary that will contain the data necessary for
         # eccentricity measurement.
         newDataDict = {}
         if "t" in dataDict:
             newDataDict.update({"t": dataDict["t"]})
         else:
-            raise Exception("`dataDict` must contain 't', the times associated"
-                            " with the eccentric waveform data.")
+            raise Exception(
+                "`dataDict` must contain 't', the times associated"
+                " with the eccentric waveform data."
+            )
         # add t_zeroecc if present
         if "t_zeroecc" in dataDict:
             newDataDict.update({"t_zeroecc": dataDict["t_zeroecc"]})
@@ -578,8 +604,8 @@ class eccDefinition:
         # and to rescale amp22 by it's value at the merger (in AmplitudeFits)
         # respectively.
         t_merger = peak_time_via_quadratic_fit(
-            newDataDict["t"],
-            amplitude_using_all_modes(newDataDict["amplm"], "amplm"))[0]
+            newDataDict["t"], amplitude_using_all_modes(newDataDict["amplm"], "amplm")
+        )[0]
         merger_idx = np.argmin(np.abs(newDataDict["t"] - t_merger))
         amp22_merger = newDataDict["amplm"][(2, 2)][merger_idx]
         phase22 = newDataDict["phaselm"][(2, 2)]
@@ -594,17 +620,19 @@ class eccDefinition:
                 "hlm = amplm * exp(- i phaselm) ensuring that "
                 "the phaselm is monotonically increasing for m > 0 modes."
                 "This might be fixed by changing the overall sign of "
-                "phase in the input `dataDict`")
+                "phase in the input `dataDict`"
+            )
         # check that omega22 is positive by checking its value at the merger
         omega22_merger = newDataDict["omegalm"][(2, 2)][merger_idx]
         if omega22_merger < 0:
-            raise Exception(f"omega22 at merger is {omega22_merger} < 0. "
-                            "omega22 must be positive.")
+            raise Exception(
+                f"omega22 at merger is {omega22_merger} < 0. "
+                "omega22 must be positive."
+            )
         # Minimum width for peak finding function
         min_width_for_extrema = self.get_width_for_peak_finder_from_phase22(
-            newDataDict["t"],
-            phase22,
-            phase22_merger)
+            newDataDict["t"], phase22, phase22_merger
+        )
         if num_orbits_to_exclude_before_merger is not None:
             # Truncate the last num_orbits_to_exclude_before_merger number of
             # orbits before merger.
@@ -614,26 +642,27 @@ class eccDefinition:
             if num_orbits_to_exclude_before_merger < 0:
                 raise ValueError(
                     "num_orbits_to_exclude_before_merger must be non-negative."
-                    " Given value was {num_orbits}")
-            index_num_orbits_earlier_than_merger \
-                = self.get_index_at_num_orbits_earlier_than_merger(
-                    phase22,
-                    phase22_merger,
-                    num_orbits_to_exclude_before_merger)
+                    " Given value was {num_orbits}"
+                )
+            index_num_orbits_earlier_than_merger = (
+                self.get_index_at_num_orbits_earlier_than_merger(
+                    phase22, phase22_merger, num_orbits_to_exclude_before_merger
+                )
+            )
             # Truncate amp, phase, omega in eccentric waveform data.
             for k in ["amplm", "phaselm", "omegalm"]:
                 for mode in newDataDict[k]:
                     newDataDict[k][mode] = newDataDict[k][mode][
-                        :index_num_orbits_earlier_than_merger]
+                        :index_num_orbits_earlier_than_merger
+                    ]
                     newDataDict["t"] = newDataDict["t"][
-                        :index_num_orbits_earlier_than_merger]
+                        :index_num_orbits_earlier_than_merger
+                    ]
         return newDataDict, t_merger, amp22_merger, min_width_for_extrema
 
-    def get_width_for_peak_finder_from_phase22(self,
-                                               t,
-                                               phase22,
-                                               phase22_merger,
-                                               num_orbits_before_merger=2):
+    def get_width_for_peak_finder_from_phase22(
+        self, t, phase22, phase22_merger, num_orbits_before_merger=2
+    ):
         """Get the minimal value of `width` parameter for extrema finding.
 
         The extrema finding method, i.e., find_peaks from scipy.signal uses the
@@ -685,14 +714,17 @@ class eccDefinition:
         # for 22 mode phase changes about 2 * 2pi for each orbit.
         t_at_num_orbits_before_merger = t[
             self.get_index_at_num_orbits_earlier_than_merger(
-                phase22, phase22_merger, num_orbits_before_merger)]
+                phase22, phase22_merger, num_orbits_before_merger
+            )
+        ]
         t_at_num_minus_one_orbits_before_merger = t[
             self.get_index_at_num_orbits_earlier_than_merger(
-                phase22, phase22_merger, num_orbits_before_merger-1)]
+                phase22, phase22_merger, num_orbits_before_merger - 1
+            )
+        ]
         # change in time over which phase22 change by 4 pi
         # between num_orbits_before_merger and num_orbits_before_merger - 1
-        dt = (t_at_num_minus_one_orbits_before_merger
-              - t_at_num_orbits_before_merger)
+        dt = t_at_num_minus_one_orbits_before_merger - t_at_num_orbits_before_merger
         # get the width using dt and the time step
         width = dt / (t[1] - t[0])
         # we want to use a width to select a peak/trough such that it is always
@@ -700,10 +732,9 @@ class eccDefinition:
         # given peak/trough, otherwise we might miss a few extrema near merger
         return int(width / 4)
 
-    def get_index_at_num_orbits_earlier_than_merger(self,
-                                                    phase22,
-                                                    phase22_merger,
-                                                    num_orbits):
+    def get_index_at_num_orbits_earlier_than_merger(
+        self, phase22, phase22_merger, num_orbits
+    ):
         """Get the index of time num orbits earlier than merger.
 
         parameters:
@@ -718,16 +749,15 @@ class eccDefinition:
         """
         # one orbit changes the 22 mode phase by 4 pi since
         # omega22 = 2 omega_orb
-        phase22_num_orbits_earlier_than_merger = (phase22_merger
-                                                  - 4 * np.pi
-                                                  * num_orbits)
+        phase22_num_orbits_earlier_than_merger = phase22_merger - 4 * np.pi * num_orbits
         # check if the waveform is longer than num_orbits
         if phase22_num_orbits_earlier_than_merger < phase22[0]:
-            raise Exception(f"Trying to find index at {num_orbits}"
-                            " orbits earlier than the merger but the waveform"
-                            f" has less than {num_orbits} orbits of data.")
-        return np.argmin(np.abs(
-            phase22 - phase22_num_orbits_earlier_than_merger))
+            raise Exception(
+                f"Trying to find index at {num_orbits}"
+                " orbits earlier than the merger but the waveform"
+                f" has less than {num_orbits} orbits of data."
+            )
+        return np.argmin(np.abs(phase22 - phase22_num_orbits_earlier_than_merger))
 
     def get_default_extrema_finding_kwargs(self, width):
         """Defaults for extrema_finding_kwargs."""
@@ -739,15 +769,17 @@ class eccDefinition:
             "width": width,
             "wlen": None,
             "rel_height": 0.5,
-            "plateau_size": None}
+            "plateau_size": None,
+        }
         return default_extrema_finding_kwargs
 
     def get_default_extra_kwargs(self):
         """Defaults for additional kwargs."""
         default_extra_kwargs = {
+            "inspiral_only": None,
             "spline_kwargs": {},
-            "extrema_finding_kwargs": {},   # Gets overridden in methods like
-                                            # eccDefinitionUsingAmplitude
+            "extrema_finding_kwargs": {},  # Gets overridden in methods like
+            # eccDefinitionUsingAmplitude
             "debug_level": 0,
             "debug_plots": False,
             "omega22_averaging_method": "orbit_averaged_omega22",
@@ -789,14 +821,20 @@ class eccDefinition:
             debug_message(
                 f"Found {len(pericenters_at_end) - 1} extra pericenters at the"
                 " end. The extra pericenters are not used when building the "
-                "spline.", self.debug_level, important=False)
+                "spline.",
+                self.debug_level,
+                important=False,
+            )
             pericenters = pericenters[pericenters <= pericenters_at_end[0]]
         apocenters_at_end = apocenters[apocenters > pericenters[-1]]
         if len(apocenters_at_end) > 1:
             debug_message(
                 f"Found {len(apocenters_at_end) - 1} extra apocenters at the "
                 "end. The extra apocenters are not used when building the "
-                "spline.", self.debug_level, important=False)
+                "spline.",
+                self.debug_level,
+                important=False,
+            )
             apocenters = apocenters[apocenters <= apocenters_at_end[0]]
 
         # At the start of the data
@@ -805,21 +843,27 @@ class eccDefinition:
             debug_message(
                 f"Found {len(pericenters_at_start) - 1} extra pericenters at "
                 "the start. The extra pericenters are not used when building "
-                "the spline.", self.debug_level, important=False)
+                "the spline.",
+                self.debug_level,
+                important=False,
+            )
             pericenters = pericenters[pericenters >= pericenters_at_start[-1]]
         apocenters_at_start = apocenters[apocenters < pericenters[0]]
         if len(apocenters_at_start) > 1:
             debug_message(
                 f"Found {len(apocenters_at_start) - 1} extra apocenters at the"
                 " start. The extra apocenters are not used when building the "
-                "spline.", self.debug_level, important=False)
+                "spline.",
+                self.debug_level,
+                important=False,
+            )
             apocenters = apocenters[apocenters >= apocenters_at_start[-1]]
 
         return pericenters, apocenters
 
-    def drop_extrema_if_extrema_jumps(self, extrema_location,
-                                      max_r_delta_phase22_extrema=1.5,
-                                      extrema_type="extrema"):
+    def drop_extrema_if_extrema_jumps(
+        self, extrema_location, max_r_delta_phase22_extrema=1.5, extrema_type="extrema"
+    ):
         """Drop the extrema if jump in extrema is detected.
 
         It might happen that an extremum between two successive extrema is
@@ -856,21 +900,24 @@ class eccDefinition:
         # Look for extrema jumps at the end of the data.
         phase22_extrema = self.phase22[extrema_location]
         delta_phase22_extrema = np.diff(phase22_extrema)
-        r_delta_phase22_extrema = (delta_phase22_extrema[1:] /
-                                   delta_phase22_extrema[:-1])
-        idx_too_large_ratio = np.where(r_delta_phase22_extrema >
-                                       max_r_delta_phase22_extrema)[0]
-        mid_index = int(len(r_delta_phase22_extrema)/2)
+        r_delta_phase22_extrema = delta_phase22_extrema[1:] / delta_phase22_extrema[:-1]
+        idx_too_large_ratio = np.where(
+            r_delta_phase22_extrema > max_r_delta_phase22_extrema
+        )[0]
+        mid_index = int(len(r_delta_phase22_extrema) / 2)
         # Check if ratio is too large near the end of the data. Check also
         # that this occurs within the second half of the extrema locations
-        if len(idx_too_large_ratio) > 0 and (idx_too_large_ratio[0]
-                                             > mid_index):
+        if len(idx_too_large_ratio) > 0 and (idx_too_large_ratio[0] > mid_index):
             first_idx = idx_too_large_ratio[0]
-            first_pair_indices = [extrema_location[first_idx+1],
-                                  extrema_location[first_idx+2]]
-            first_pair_times = [self.t[first_pair_indices[0]],
-                                self.t[first_pair_indices[1]]]
-            phase_diff_current = delta_phase22_extrema[first_idx+1]
+            first_pair_indices = [
+                extrema_location[first_idx + 1],
+                extrema_location[first_idx + 2],
+            ]
+            first_pair_times = [
+                self.t[first_pair_indices[0]],
+                self.t[first_pair_indices[1]],
+            ]
+            phase_diff_current = delta_phase22_extrema[first_idx + 1]
             phase_diff_previous = delta_phase22_extrema[first_idx]
             debug_message(
                 f"At least a pair of {extrema_type} are too widely separated"
@@ -884,23 +931,30 @@ class eccDefinition:
                 f"{extrema_type}={phase_diff_previous/(4*np.pi):.2f}*4pi\n"
                 f"{extrema_type} after idx={first_pair_indices[0]}, i.e.,"
                 f"t > {first_pair_times[0]} are therefore dropped.",
-                self.debug_level, important=False)
-            extrema_location = extrema_location[extrema_location <=
-                                                extrema_location[first_idx+1]]
+                self.debug_level,
+                important=False,
+            )
+            extrema_location = extrema_location[
+                extrema_location <= extrema_location[first_idx + 1]
+            ]
         # Check if ratio is too small
-        idx_too_small_ratio = np.where(r_delta_phase22_extrema <
-                                       (1 / max_r_delta_phase22_extrema))[0]
+        idx_too_small_ratio = np.where(
+            r_delta_phase22_extrema < (1 / max_r_delta_phase22_extrema)
+        )[0]
         # We want to detect extrema jump near the start of the data.
         # Check that the location where such jump is found falls within the
         # first half of the extrema locations.
-        if len(idx_too_small_ratio) > 0 and (idx_too_small_ratio[-1]
-                                             < mid_index):
+        if len(idx_too_small_ratio) > 0 and (idx_too_small_ratio[-1] < mid_index):
             last_idx = idx_too_small_ratio[-1]
-            last_pair_indices = [extrema_location[last_idx+1],
-                                 extrema_location[last_idx+2]]
-            last_pair_times = [self.t[last_pair_indices[0]],
-                               self.t[last_pair_indices[1]]]
-            phase_diff_current = delta_phase22_extrema[last_idx+1]
+            last_pair_indices = [
+                extrema_location[last_idx + 1],
+                extrema_location[last_idx + 2],
+            ]
+            last_pair_times = [
+                self.t[last_pair_indices[0]],
+                self.t[last_pair_indices[1]],
+            ]
+            phase_diff_current = delta_phase22_extrema[last_idx + 1]
             phase_diff_previous = delta_phase22_extrema[last_idx]
             debug_message(
                 f"At least a pair of {extrema_type} are too widely separated"
@@ -914,14 +968,17 @@ class eccDefinition:
                 f"{phase_diff_current/(4*np.pi):.2f}*4pi\n"
                 f"{extrema_type} before {last_pair_indices[1]}, i.e., t < t="
                 f"{last_pair_times[-1]} are therefore dropped.",
-                self.debug_level, important=False)
-            extrema_location = extrema_location[extrema_location >=
-                                                extrema_location[last_idx]]
+                self.debug_level,
+                important=False,
+            )
+            extrema_location = extrema_location[
+                extrema_location >= extrema_location[last_idx]
+            ]
         return extrema_location
 
-    def drop_extrema_if_too_close(self, extrema_location,
-                                  min_phase22_difference=4*np.pi,
-                                  extrema_type="extrema"):
+    def drop_extrema_if_too_close(
+        self, extrema_location, min_phase22_difference=4 * np.pi, extrema_type="extrema"
+    ):
         """Check if a pair of extrema is too close to each other.
 
         If a pair of extrema is found to be too close to each other, then drop
@@ -940,15 +997,16 @@ class eccDefinition:
         """
         phase22_extrema = self.phase22[extrema_location]
         phase22_diff_extrema = np.diff(phase22_extrema)
-        idx_too_close = np.where(phase22_diff_extrema
-                                 < min_phase22_difference)[0]
-        mid_index = int(len(phase22_diff_extrema)/2)
+        idx_too_close = np.where(phase22_diff_extrema < min_phase22_difference)[0]
+        mid_index = int(len(phase22_diff_extrema) / 2)
         if len(idx_too_close) > 0:
             # Look for too close pairs in the second half
             if idx_too_close[0] > mid_index:
                 first_index = idx_too_close[0]
-                first_pair = [extrema_location[first_index],
-                              extrema_location[first_index+1]]
+                first_pair = [
+                    extrema_location[first_index],
+                    extrema_location[first_index + 1],
+                ]
                 first_pair_times = self.t[first_pair]
                 debug_message(
                     f"At least a pair of {extrema_type} are too close to "
@@ -960,14 +1018,19 @@ class eccDefinition:
                     f"{extrema_type} after {extrema_location[first_index]}"
                     f" i.e., t > {self.t[extrema_location[first_index]]} "
                     "are dropped.",
-                    self.debug_level, important=False)
+                    self.debug_level,
+                    important=False,
+                )
                 extrema_location = extrema_location[
-                    extrema_location <= extrema_location[first_index]]
+                    extrema_location <= extrema_location[first_index]
+                ]
             # Look for too close pairs in the first half
             if idx_too_close[-1] < mid_index:
                 last_index = idx_too_close[-1]
-                last_pair = [extrema_location[last_index],
-                             extrema_location[last_index-1]]
+                last_pair = [
+                    extrema_location[last_index],
+                    extrema_location[last_index - 1],
+                ]
                 last_pair_times = self.t[last_pair]
                 debug_message(
                     f"At least a pair of {extrema_type} are too close to "
@@ -979,13 +1042,17 @@ class eccDefinition:
                     f" {extrema_type} before {extrema_location[last_index]}"
                     f" i.e., t < {self.t[extrema_location[last_index]]} "
                     "are dropped.",
-                    self.debug_level, important=False)
+                    self.debug_level,
+                    important=False,
+                )
                 extrema_location = extrema_location[
-                    extrema_location >= extrema_location[last_index]]
+                    extrema_location >= extrema_location[last_index]
+                ]
         return extrema_location
 
-    def get_good_extrema(self, pericenters, apocenters,
-                         max_r_delta_phase22_extrema=1.5):
+    def get_good_extrema(
+        self, pericenters, apocenters, max_r_delta_phase22_extrema=1.5
+    ):
         """Retain only the good extrema if there are extra extrema or missing extrema.
 
         If the number of pericenters/apocenters, n, after the last
@@ -1035,19 +1102,23 @@ class eccDefinition:
             1d array of apocenters after dropping apocenters as necessary.
         """
         pericenters = self.drop_extrema_if_extrema_jumps(
-            pericenters, max_r_delta_phase22_extrema, "pericenters")
+            pericenters, max_r_delta_phase22_extrema, "pericenters"
+        )
         apocenters = self.drop_extrema_if_extrema_jumps(
-            apocenters, max_r_delta_phase22_extrema, "apocenters")
+            apocenters, max_r_delta_phase22_extrema, "apocenters"
+        )
         pericenters = self.drop_extrema_if_too_close(
-            pericenters, extrema_type="pericenters")
+            pericenters, extrema_type="pericenters"
+        )
         apocenters = self.drop_extrema_if_too_close(
-            apocenters, extrema_type="apocenters")
+            apocenters, extrema_type="apocenters"
+        )
         pericenters, apocenters = self.drop_extra_extrema_at_ends(
-            pericenters, apocenters)
+            pericenters, apocenters
+        )
         return pericenters, apocenters
 
-    def get_interp(self, oldX, oldY, allowExtrapolation=False,
-                   interpolator="spline"):
+    def get_interp(self, oldX, oldY, allowExtrapolation=False, interpolator="spline"):
         """Get interpolant.
 
         A wrapper of utils.get_interpolant with check_kwargs=False.
@@ -1056,20 +1127,30 @@ class eccDefinition:
         are checked once in the init and passed to the interpolation
         function without repeating checks.
         """
-        return get_interpolant(oldX, oldY, allowExtrapolation, interpolator,
-                               spline_kwargs=self.spline_kwargs,
-                               check_kwargs=False)
+        return get_interpolant(
+            oldX,
+            oldY,
+            allowExtrapolation,
+            interpolator,
+            spline_kwargs=self.spline_kwargs,
+            check_kwargs=False,
+        )
 
-    def interp(self, newX, oldX, oldY, allowExtrapolation=False,
-               interpolator="spline"):
+    def interp(self, newX, oldX, oldY, allowExtrapolation=False, interpolator="spline"):
         """Get interpolated values.
 
         A wrapper of utils.interpolate with check_kwargs=False for
         reasons explained in the documentation of get_interp function.
         """
-        return interpolate(newX, oldX, oldY, allowExtrapolation, interpolator,
-                           spline_kwargs=self.spline_kwargs,
-                           check_kwargs=False)
+        return interpolate(
+            newX,
+            oldX,
+            oldY,
+            allowExtrapolation,
+            interpolator,
+            spline_kwargs=self.spline_kwargs,
+            check_kwargs=False,
+        )
 
     def interp_extrema(self, extrema_type="pericenters"):
         """Build interpolant through extrema.
@@ -1088,15 +1169,16 @@ class eccDefinition:
         elif extrema_type == "apocenters":
             extrema = self.apocenters_location
         else:
-            raise Exception("extrema_type must be either "
-                            "'pericenrers' or 'apocenters'.")
+            raise Exception(
+                "extrema_type must be either " "'pericenrers' or 'apocenters'."
+            )
         if len(extrema) >= 2:
-            return self.get_interp(self.t[extrema],
-                                   self.omega22[extrema])
+            return self.get_interp(self.t[extrema], self.omega22[extrema])
         else:
             raise Exception(
                 f"Sufficient number of {extrema_type} are not found."
-                " Can not create an interpolant.")
+                " Can not create an interpolant."
+            )
 
     def check_num_extrema(self, extrema, extrema_type="extrema"):
         """Check number of extrema.
@@ -1146,8 +1228,7 @@ class eccDefinition:
             # `num_orbits_to_remove_before_merger` orbits before the merger,
             # phase22[-1] corresponds to the phase of the (2, 2) mode
             # `num_orbits_to_remove_before_merger` orbits before the merger.
-            approximate_num_orbits = ((self.phase22[-1] - self.phase22[0])
-                                      / (4 * np.pi))
+            approximate_num_orbits = (self.phase22[-1] - self.phase22[0]) / (4 * np.pi)
             if approximate_num_orbits > 5:
                 # The waveform is sufficiently long but the extrema finding
                 # method fails to find enough number of extrema. This may
@@ -1157,8 +1238,7 @@ class eccDefinition:
                 insufficient_extrema_but_long_waveform = True
             else:
                 insufficient_extrema_but_long_waveform = False
-            if insufficient_extrema_but_long_waveform \
-               and self.set_failures_to_zero:
+            if insufficient_extrema_but_long_waveform and self.set_failures_to_zero:
                 debug_message(
                     "The waveform has approximately "
                     f"{approximate_num_orbits:.2f}"
@@ -1168,7 +1248,8 @@ class eccDefinition:
                     "Instead the eccentricity and mean anomaly will be set to "
                     "zero.",
                     important=True,
-                    debug_level=0)
+                    debug_level=0,
+                )
             else:
                 recommended_methods = ["ResidualAmplitude", "AmplitudeFits"]
                 if self.method not in recommended_methods:
@@ -1184,12 +1265,17 @@ class eccDefinition:
                     f"Number of {extrema_type} found = {num_extrema}.\n"
                     "Can not build frequency interpolant through the "
                     f"{extrema_type}.\n"
-                    f"{method_message}")
+                    f"{method_message}"
+                )
             return insufficient_extrema_but_long_waveform
 
-    def check_if_dropped_too_many_extrema(self, original_extrema, new_extrema,
-                                          extrema_type="extrema",
-                                          threshold_fraction=0.5):
+    def check_if_dropped_too_many_extrema(
+        self,
+        original_extrema,
+        new_extrema,
+        extrema_type="extrema",
+        threshold_fraction=0.5,
+    ):
         """Check if too many extrema was dropped.
 
         This function only has checks with the flag important=False, which
@@ -1223,9 +1309,12 @@ class eccDefinition:
 
         num_dropped_extrema = len(original_extrema) - len(new_extrema)
         if num_dropped_extrema > (threshold_fraction * len(original_extrema)):
-            debug_message(f"More than {threshold_fraction * 100}% of the "
-                          f"original {extrema_type} was dropped.",
-                          self.debug_level, important=False)
+            debug_message(
+                f"More than {threshold_fraction * 100}% of the "
+                f"original {extrema_type} was dropped.",
+                self.debug_level,
+                important=False,
+            )
 
     def measure_ecc(self, tref_in=None, fref_in=None):
         """Measure eccentricity and mean anomaly from a gravitational waveform.
@@ -1335,8 +1424,7 @@ class eccDefinition:
         """
         # check that only one of tref_in or fref_in is provided
         if (tref_in is not None) + (fref_in is not None) != 1:
-            raise KeyError("Exactly one of tref_in and fref_in"
-                           " should be specified.")
+            raise KeyError("Exactly one of tref_in and fref_in" " should be specified.")
         elif tref_in is not None:
             # Identify whether the reference point is in time or frequency
             self.domain = "time"
@@ -1357,20 +1445,21 @@ class eccDefinition:
         # might be that the eccentricity is too small for the current method to
         # detect it. See Fig.4 in arxiv.2302.11257. In such cases, the
         # following variable will be true.
-        insufficient_pericenters_but_long_waveform \
-            = self.check_num_extrema(pericenters, "pericenters")
+        insufficient_pericenters_but_long_waveform = self.check_num_extrema(
+            pericenters, "pericenters"
+        )
         # In some cases it is easier to find the pericenters than finding the
         # apocenters. For such cases, one can only find the pericenters and use
         # the mid points between two consecutive pericenters as the location of
         # the apocenters.
-        if self.extra_kwargs[
-                "treat_mid_points_between_pericenters_as_apocenters"]:
+        if self.extra_kwargs["treat_mid_points_between_pericenters_as_apocenters"]:
             apocenters = self.get_apocenters_from_pericenters(pericenters)
         else:
             apocenters = self.find_extrema("apocenters")
         original_apocenters = apocenters.copy()
-        insufficient_apocenters_but_long_waveform \
-            = self.check_num_extrema(apocenters, "apocenters")
+        insufficient_apocenters_but_long_waveform = self.check_num_extrema(
+            apocenters, "apocenters"
+        )
 
         # If the eccentricity is too small for a method to find the extrema,
         # and `set_failures_to_zero` is true, then we set the eccentricity and
@@ -1378,9 +1467,15 @@ class eccDefinition:
         # code in this function is not executed, and therefore, many variables
         # that are needed for making diagnostic plots are not computed. Thus,
         # in such cases, the diagnostic plots may not work.
-        if any([insufficient_pericenters_but_long_waveform,
-                insufficient_apocenters_but_long_waveform]) \
-                and self.set_failures_to_zero:
+        if (
+            any(
+                [
+                    insufficient_pericenters_but_long_waveform,
+                    insufficient_apocenters_but_long_waveform,
+                ]
+            )
+            and self.set_failures_to_zero
+        ):
             # Store this information that we are setting ecc and mean anomaly
             # to zero to use it in other places
             self.setting_ecc_to_zero = True
@@ -1389,27 +1484,26 @@ class eccDefinition:
             self.setting_ecc_to_zero = False
 
         # Choose good extrema
-        self.pericenters_location, self.apocenters_location \
-            = self.get_good_extrema(pericenters, apocenters)
+        self.pericenters_location, self.apocenters_location = self.get_good_extrema(
+            pericenters, apocenters
+        )
 
         # Check if we dropped too many extrema.
-        self.check_if_dropped_too_many_extrema(original_pericenters,
-                                               self.pericenters_location,
-                                               "pericenters", 0.5)
-        self.check_if_dropped_too_many_extrema(original_apocenters,
-                                               self.apocenters_location,
-                                               "apocenters", 0.5)
+        self.check_if_dropped_too_many_extrema(
+            original_pericenters, self.pericenters_location, "pericenters", 0.5
+        )
+        self.check_if_dropped_too_many_extrema(
+            original_apocenters, self.apocenters_location, "apocenters", 0.5
+        )
         # check that pericenters and apocenters are appearing alternately
         self.check_pericenters_and_apocenters_appear_alternately()
         # check extrema separation
-        self.orb_phase_diff_at_pericenters, \
-            self.orb_phase_diff_ratio_at_pericenters \
-            = self.check_extrema_separation(self.pericenters_location,
-                                            "pericenters")
-        self.orb_phase_diff_at_apocenters, \
-            self.orb_phase_diff_ratio_at_apocenters \
-            = self.check_extrema_separation(self.apocenters_location,
-                                            "apocenters")
+        self.orb_phase_diff_at_pericenters, self.orb_phase_diff_ratio_at_pericenters = (
+            self.check_extrema_separation(self.pericenters_location, "pericenters")
+        )
+        self.orb_phase_diff_at_apocenters, self.orb_phase_diff_ratio_at_apocenters = (
+            self.check_extrema_separation(self.apocenters_location, "apocenters")
+        )
 
         # Build the interpolants of omega22 at the extrema
         self.omega22_pericenters_interp = self.interp_extrema("pericenters")
@@ -1421,16 +1515,19 @@ class eccDefinition:
         self.tmin = max(self.t_pericenters[0], self.t_apocenters[0])
         if self.domain == "frequency":
             # get the tref_in and fref_out from fref_in
-            self.tref_in, self.fref_out \
-                = self.compute_tref_in_and_fref_out_from_fref_in(self.fref_in)
+            self.tref_in, self.fref_out = (
+                self.compute_tref_in_and_fref_out_from_fref_in(self.fref_in)
+            )
         # We measure eccentricity and mean anomaly from tmin to tmax.
         self.tref_out = self.tref_in[
-            np.logical_and(self.tref_in <= self.tmax,
-                           self.tref_in >= self.tmin)]
+            np.logical_and(self.tref_in <= self.tmax, self.tref_in >= self.tmin)
+        ]
         # set time for checks and diagnostics
         self.t_for_checks = self.dataDict["t"][
-            np.logical_and(self.dataDict["t"] >= self.tmin,
-                           self.dataDict["t"] <= self.tmax)]
+            np.logical_and(
+                self.dataDict["t"] >= self.tmin, self.dataDict["t"] <= self.tmax
+            )
+        ]
 
         # Sanity checks
         # check that fref_out and tref_out are of the same length
@@ -1439,7 +1536,8 @@ class eccDefinition:
                 raise Exception(
                     "length of fref_out and tref_out do not match."
                     f"fref_out has length {len(self.fref_out)} and "
-                    f"tref_out has length {len(self.tref_out)}.")
+                    f"tref_out has length {len(self.tref_out)}."
+                )
 
         # Check if tref_out is reasonable
         if len(self.tref_out) == 0:
@@ -1447,24 +1545,30 @@ class eccDefinition:
             raise Exception(
                 "tref_out is empty. This can happen if the "
                 "waveform has insufficient identifiable "
-                "pericenters/apocenters.")
+                "pericenters/apocenters."
+            )
         # check that tref_out is within t_zeroecc_shifted to make sure that
         # the output is not in the extrapolated region.
-        if "hlm_zeroecc" in self.dataDict and (self.tref_out[-1]
-                                               > self.t_zeroecc_shifted[-1]):
-            raise Exception("tref_out is in extrapolated region.\n"
-                            f"Last element in tref_out = {self.tref_out[-1]}\n"
-                            "Last element in t_zeroecc = "
-                            f"{self.t_zeroecc_shifted[-1]}.\nThis might happen"
-                            " when 'num_orbits_to_exclude_before_merger' is "
-                            "set to None and part of zeroecc waveform is "
-                            "shorter than that of the ecc waveform requiring "
-                            "extrapolation to compute residual data.")
+        if "hlm_zeroecc" in self.dataDict and (
+            self.tref_out[-1] > self.t_zeroecc_shifted[-1]
+        ):
+            raise Exception(
+                "tref_out is in extrapolated region.\n"
+                f"Last element in tref_out = {self.tref_out[-1]}\n"
+                "Last element in t_zeroecc = "
+                f"{self.t_zeroecc_shifted[-1]}.\nThis might happen"
+                " when 'num_orbits_to_exclude_before_merger' is "
+                "set to None and part of zeroecc waveform is "
+                "shorter than that of the ecc waveform requiring "
+                "extrapolation to compute residual data."
+            )
 
         # Check if tref_out has a pericenter before and after.
         # This is required to define mean anomaly.
-        if self.tref_out[0] < self.t_pericenters[0] \
-           or self.tref_out[-1] > self.t_pericenters[-1]:
+        if (
+            self.tref_out[0] < self.t_pericenters[0]
+            or self.tref_out[-1] > self.t_pericenters[-1]
+        ):
             raise Exception("Reference time must be within two pericenters.")
 
         # compute eccentricity at self.tref_out
@@ -1474,8 +1578,11 @@ class eccDefinition:
 
         # check if eccentricity is positive
         if any(self.eccentricity < 0):
-            debug_message("Encountered negative eccentricity.",
-                          self.debug_level, point_to_verbose_output=True)
+            debug_message(
+                "Encountered negative eccentricity.",
+                self.debug_level,
+                point_to_verbose_output=True,
+            )
 
         # check if eccentricity is monotonic and convex
         self.check_monotonicity_and_convexity()
@@ -1523,12 +1630,15 @@ class eccDefinition:
         # mean anomaly, etc., to scalar.
         if self.ref_ndim == 0:
             # check if ecc, mean ano have more than one elements
-            for var, arr in zip(["eccentricity", "mean_anomaly"],
-                                [self.eccentricity, self.mean_anomaly]):
+            for var, arr in zip(
+                ["eccentricity", "mean_anomaly"], [self.eccentricity, self.mean_anomaly]
+            ):
                 if len(arr) != 1:
-                    raise Exception(f"The reference {self.domain} is scalar "
-                                    f"but measured {var} does not have "
-                                    "exactly one element.")
+                    raise Exception(
+                        f"The reference {self.domain} is scalar "
+                        f"but measured {var} does not have "
+                        "exactly one element."
+                    )
             self.eccentricity = self.eccentricity[0]
             self.mean_anomaly = self.mean_anomaly[0]
             if self.domain == "time":
@@ -1538,16 +1648,14 @@ class eccDefinition:
 
         return_dict = {
             "eccentricity": self.eccentricity,
-            "mean_anomaly": self.mean_anomaly
+            "mean_anomaly": self.mean_anomaly,
         }
         # Return either tref_out or fref_out, depending on whether the input
         # reference point was in time or frequency, respectively.
         if self.domain == "time":
-            return_dict.update({
-              "tref_out": self.tref_out})
+            return_dict.update({"tref_out": self.tref_out})
         else:
-            return_dict.update({
-              "fref_out": self.fref_out})
+            return_dict.update({"fref_out": self.fref_out})
         return return_dict
 
     def et_from_ew22_0pn(self, ew22):
@@ -1563,8 +1671,8 @@ class eccDefinition:
         et:
             Temporal eccentricity at Newtonian order.
         """
-        psi = np.arctan2(1. - ew22*ew22, 2.*ew22)
-        et = np.cos(psi/3.) - np.sqrt(3) * np.sin(psi/3.)
+        psi = np.arctan2(1.0 - ew22 * ew22, 2.0 * ew22)
+        et = np.cos(psi / 3.0) - np.sqrt(3) * np.sin(psi / 3.0)
 
         return et
 
@@ -1590,10 +1698,9 @@ class eccDefinition:
 
         omega22_pericenter_at_t = self.omega22_pericenters_interp(t)
         omega22_apocenter_at_t = self.omega22_apocenters_interp(t)
-        self.e_omega22 = ((np.sqrt(omega22_pericenter_at_t)
-                           - np.sqrt(omega22_apocenter_at_t))
-                          / (np.sqrt(omega22_pericenter_at_t)
-                             + np.sqrt(omega22_apocenter_at_t)))
+        self.e_omega22 = (
+            np.sqrt(omega22_pericenter_at_t) - np.sqrt(omega22_apocenter_at_t)
+        ) / (np.sqrt(omega22_pericenter_at_t) + np.sqrt(omega22_apocenter_at_t))
         # get the  temporal eccentricity from e_omega22
         return self.et_from_ew22_0pn(self.e_omega22)
 
@@ -1616,12 +1723,10 @@ class eccDefinition:
         self.check_input_limits(t, self.tmin, self.tmax)
 
         if self.ecc_for_checks is None:
-            self.ecc_for_checks = self.compute_eccentricity(
-                self.t_for_checks)
+            self.ecc_for_checks = self.compute_eccentricity(self.t_for_checks)
 
         if self.ecc_interp is None:
-            self.ecc_interp = self.get_interp(self.t_for_checks,
-                                              self.ecc_for_checks)
+            self.ecc_interp = self.get_interp(self.t_for_checks, self.ecc_for_checks)
         # Get derivative of ecc(t) using spline
         return self.ecc_interp.derivative(n=n)(t)
 
@@ -1685,23 +1790,30 @@ class eccDefinition:
         """
         input_vals = np.atleast_1d(input_vals)
         if any(input_vals > max_allowed_val):
-            message = (f"Found reference {self.domain} later than maximum "
-                       f"allowed {self.domain}={max_allowed_val}")
+            message = (
+                f"Found reference {self.domain} later than maximum "
+                f"allowed {self.domain}={max_allowed_val}"
+            )
             if self.domain == "time":
                 # Add information about the maximum allowed time
                 message += " which corresponds to "
                 if self.setting_ecc_to_zero:
-                    message += ("time at `num_orbits_to_exclude_before_merger`"
-                                " orbits before the merger.")
+                    message += (
+                        "time at `num_orbits_to_exclude_before_merger`"
+                        " orbits before the merger."
+                    )
                 else:
                     message += "min(last pericenter time, last apocenter time)."
             raise Exception(
                 f"Reference {self.domain} is outside the allowed "
                 f"range [{min_allowed_val}, {max_allowed_val}]."
-                f"\n{message}")
+                f"\n{message}"
+            )
         if any(input_vals < min_allowed_val):
-            message = (f"Found reference {self.domain} earlier than minimum "
-                       f"allowed {self.domain}={min_allowed_val}")
+            message = (
+                f"Found reference {self.domain} earlier than minimum "
+                f"allowed {self.domain}={min_allowed_val}"
+            )
             if self.domain == "time":
                 # Add information about the minimum allowed time
                 message += " which corresponds to "
@@ -1712,13 +1824,17 @@ class eccDefinition:
             raise Exception(
                 f"Reference {self.domain} is outside the allowed "
                 f"range [{min_allowed_val}, {max_allowed_val}]."
-                f"\n{message}")
+                f"\n{message}"
+            )
 
-    def check_extrema_separation(self, extrema_location,
-                                 extrema_type="extrema",
-                                 max_orb_phase_diff_factor=1.5,
-                                 min_orb_phase_diff=np.pi,
-                                 always_return=False):
+    def check_extrema_separation(
+        self,
+        extrema_location,
+        extrema_type="extrema",
+        max_orb_phase_diff_factor=1.5,
+        min_orb_phase_diff=np.pi,
+        always_return=False,
+    ):
         """Check if two extrema are too close or too far.
 
         This function only has checks with the flag important=False, which
@@ -1754,35 +1870,41 @@ class eccDefinition:
         if any(orb_phase_diff < min_orb_phase_diff):
             too_close_idx = np.where(orb_phase_diff < min_orb_phase_diff)[0]
             too_close_times = t_at_extrema[too_close_idx]
-            debug_message(f"At least a pair of {extrema_type} are too close."
-                          " Minimum orbital phase diff is "
-                          f"{min(orb_phase_diff)}. Times of occurrences are"
-                          f" {too_close_times}",
-                          self.debug_level, important=False)
-        if any(np.abs(orb_phase_diff - np.pi)
-               < np.abs(orb_phase_diff - 2 * np.pi)):
-            debug_message("Phase shift closer to pi than 2 pi detected.",
-                          self.debug_level, important=False)
+            debug_message(
+                f"At least a pair of {extrema_type} are too close."
+                " Minimum orbital phase diff is "
+                f"{min(orb_phase_diff)}. Times of occurrences are"
+                f" {too_close_times}",
+                self.debug_level,
+                important=False,
+            )
+        if any(np.abs(orb_phase_diff - np.pi) < np.abs(orb_phase_diff - 2 * np.pi)):
+            debug_message(
+                "Phase shift closer to pi than 2 pi detected.",
+                self.debug_level,
+                important=False,
+            )
         # This might suggest that the extrema finding method missed an extrema.
         # We will check if the phase diff at an extrema is greater than
         # max_orb_phase_diff_factor times the orb_phase_diff at the
         # previous extrema
-        orb_phase_diff_ratio = orb_phase_diff[1:]/orb_phase_diff[:-1]
+        orb_phase_diff_ratio = orb_phase_diff[1:] / orb_phase_diff[:-1]
         # make it of same length as orb_phase_diff by prepending 0
         orb_phase_diff_ratio = np.append([0], orb_phase_diff_ratio)
         if any(orb_phase_diff_ratio > max_orb_phase_diff_factor):
-            too_far_idx = np.where(orb_phase_diff_ratio
-                                   > max_orb_phase_diff_factor)[0]
+            too_far_idx = np.where(orb_phase_diff_ratio > max_orb_phase_diff_factor)[0]
             too_far_times = t_at_extrema[too_far_idx]
-            debug_message(f"At least a pair of {extrema_type} are too far."
-                          " Maximum orbital phase diff is "
-                          f"{max(orb_phase_diff)}. Times of occurrences are"
-                          f" {too_far_times}",
-                          self.debug_level, important=False)
+            debug_message(
+                f"At least a pair of {extrema_type} are too far."
+                " Maximum orbital phase diff is "
+                f"{max(orb_phase_diff)}. Times of occurrences are"
+                f" {too_far_times}",
+                self.debug_level,
+                important=False,
+            )
         return orb_phase_diff, orb_phase_diff_ratio
 
-    def check_monotonicity_and_convexity(self,
-                                         check_convexity=False):
+    def check_monotonicity_and_convexity(self, check_convexity=False):
         """Check if measured eccentricity is a monotonic function of time.
 
         Parameters
@@ -1793,39 +1915,45 @@ class eccDefinition:
         """
         if self.decc_dt_for_checks is None:
             self.decc_dt_for_checks = self.derivative_of_eccentricity(
-                self.t_for_checks, n=1)
+                self.t_for_checks, n=1
+            )
 
         # Is ecc(t) a monotonically decreasing function?
         if any(self.decc_dt_for_checks > 0):
             idx = np.where(self.decc_dt_for_checks > 0)[0]
             range = self.get_range_from_indices(idx, self.t_for_checks)
-            message = ("egw(t) is nonmonotonic "
-                       f"{'at' if len(idx) == 1 else 'in the range'} {range}")
-            debug_message(message, self.debug_level,
-                          point_to_verbose_output=True)
+            message = (
+                "egw(t) is nonmonotonic "
+                f"{'at' if len(idx) == 1 else 'in the range'} {range}"
+            )
+            debug_message(message, self.debug_level, point_to_verbose_output=True)
 
         # Is ecc(t) a convex function? That is, is the second
         # derivative always negative?
         if check_convexity:
             self.d2ecc_dt_for_checks = self.derivative_of_eccentricity(
-                self.t_for_checks, n=2)
+                self.t_for_checks, n=2
+            )
             if any(self.d2ecc_dt_for_checks > 0):
                 idx = np.where(self.d2ecc_dt_for_checks > 0)[0]
                 range = self.get_range_from_indices(idx, self.t_for_checks)
-                message = ("Second derivative of egw(t) is positive "
-                           f"{'at' if len(idx) == 1 else 'in the range'} "
-                           f"{range}")
-                debug_message(f"{message} expected to be always negative",
-                              self.debug_level,
-                              point_to_verbose_output=True)
+                message = (
+                    "Second derivative of egw(t) is positive "
+                    f"{'at' if len(idx) == 1 else 'in the range'} "
+                    f"{range}"
+                )
+                debug_message(
+                    f"{message} expected to be always negative",
+                    self.debug_level,
+                    point_to_verbose_output=True,
+                )
 
     def get_range_from_indices(self, indices, times):
         """Get the range of time from indices for gives times array."""
         if len(indices) == 1:
             return times[indices[0]]
         else:
-            return [times[indices[0]],
-                    times[indices[-1]]]
+            return [times[indices[0]], times[indices[-1]]]
 
     def check_pericenters_and_apocenters_appear_alternately(self):
         """Check that pericenters and apocenters appear alternately.
@@ -1847,14 +1975,15 @@ class eccDefinition:
 
         # if pericenters and apocenters appear alternately, then the number
         # of pericenters and apocenters should differ by one or zero.
-        if abs(len(self.pericenters_location)
-               - len(self.apocenters_location)) >= 2:
+        if abs(len(self.pericenters_location) - len(self.apocenters_location)) >= 2:
             debug_message(
                 "Number of pericenters and number of apocenters differ by "
                 f"{abs(len(self.pericenters_location) - len(self.apocenters_location))}"
                 ". This implies that pericenters and apocenters are not "
                 "appearing alternately.",
-                self.debug_level, important=False)
+                self.debug_level,
+                important=False,
+            )
         else:
             # If the number of pericenters and apocenters differ by zero or one
             # then we do the following:
@@ -1862,8 +1991,10 @@ class eccDefinition:
                 # Check the time of the first pericenter and the first
                 # apocenter whichever comes first is assigned as arr1 and the
                 # other one as arr2
-                if self.t[self.pericenters_location][0] < self.t[
-                        self.apocenters_location][0]:
+                if (
+                    self.t[self.pericenters_location][0]
+                    < self.t[self.apocenters_location][0]
+                ):
                     arr1 = self.pericenters_location
                     arr2 = self.apocenters_location
                 else:
@@ -1873,8 +2004,7 @@ class eccDefinition:
                 # Check the number of pericenters and apocenters
                 # whichever is larger is assigned as arr1 and the other one as
                 # arr2
-                if len(self.pericenters_location) > len(
-                        self.apocenters_location):
+                if len(self.pericenters_location) > len(self.apocenters_location):
                     arr1 = self.pericenters_location
                     arr2 = self.apocenters_location
                 else:
@@ -1897,7 +2027,9 @@ class eccDefinition:
                 debug_message(
                     "There is at least one instance where "
                     "pericenters and apocenters do not appear alternately.",
-                    self.debug_level, important=False)
+                    self.debug_level,
+                    important=False,
+                )
 
     def compute_res_amp22_and_res_omega22(self):
         """Compute residual amp22 and residual omega22."""
@@ -1907,7 +2039,8 @@ class eccDefinition:
         if not np.allclose(self.t_zeroecc_diff, self.t_zeroecc_diff[0]):
             raise Exception(
                 "Input time array t_zeroecc must have uniform time steps\n"
-                f"Time steps are {self.t_zeroecc_diff}")
+                f"Time steps are {self.t_zeroecc_diff}"
+            )
         # get amplitude and omega of 22 mode
         self.amp22_zeroecc = self.dataDict["amplm_zeroecc"][(2, 2)]
         self.omega22_zeroecc = self.dataDict["omegalm_zeroecc"][(2, 2)]
@@ -1915,42 +2048,50 @@ class eccDefinition:
         # zeroecc time axis such that the merger of the zeroecc is at the
         # same time as that of the eccentric waveform
         amp = amplitude_using_all_modes(
-            self.dataDict["amplm_zeroecc"], "amplm")  # total amplitude
-        self.t_merger_zeroecc = peak_time_via_quadratic_fit(
-            self.t_zeroecc, amp)[0]
-        self.t_zeroecc_shifted = (self.t_zeroecc
-                                  - self.t_merger_zeroecc
-                                  + self.t_merger)
+            self.dataDict["amplm_zeroecc"], "amplm"
+        )  # total amplitude
+        if self.extra_kwargs["inspiral_only"]:
+            self.t_merger_zeroecc = self.t_zeroecc[-1]
+        else:
+            self.t_merger_zeroecc = peak_time_via_quadratic_fit(self.t_zeroecc, amp)[0]
+        self.t_zeroecc_shifted = self.t_zeroecc - self.t_merger_zeroecc + self.t_merger
         # check that the length of zeroecc waveform is greater than equal
         # to the length of the eccentric waveform.
         # This is important to satisfy. Otherwise there will be extrapolation
         # when we interpolate zeroecc ecc waveform data on the eccentric
         # waveform time.
         if self.t_zeroecc_shifted[0] > self.t[0]:
-            raise Exception("Length of zeroecc waveform must be >= the length "
-                            "of the eccentric waveform. Eccentric waveform "
-                            f"starts at {self.t[0]} whereas zeroecc waveform "
-                            f"starts at {self.t_zeroecc_shifted[0]}. Try "
-                            "starting the zeroecc waveform at lower Momega0.")
+            raise Exception(
+                "Length of zeroecc waveform must be >= the length "
+                "of the eccentric waveform. Eccentric waveform "
+                f"starts at {self.t[0]} whereas zeroecc waveform "
+                f"starts at {self.t_zeroecc_shifted[0]}. Try "
+                "starting the zeroecc waveform at lower Momega0."
+            )
         # check if extrapolation happens in the pre-merger region.
         if self.t_zeroecc_shifted[-1] < self.t_merger:
-            raise Exception("Trying to extrapolate zeroecc waveform in "
-                            "pre-merger region.\n"
-                            f"Merger time={self.t_merger}, last available "
-                            f"zeroecc time={self.t_zeroecc_shifted[-1]}")
+            raise Exception(
+                "Trying to extrapolate zeroecc waveform in "
+                "pre-merger region.\n"
+                f"Merger time={self.t_merger}, last available "
+                f"zeroecc time={self.t_zeroecc_shifted[-1]}"
+            )
         # In case the post-merger part of the zeroecc waveform is shorter than
         # that of the the ecc waveform, we allow extrapolation so that the
         # residual quantities can be computed. Above, we check that this
         # extrapolation does not happen before t_merger, which is where
         # eccentricity is normally measured.
         self.amp22_zeroecc_interp = self.interp(
-            self.t, self.t_zeroecc_shifted, self.amp22_zeroecc,
-            allowExtrapolation=True)
+            self.t, self.t_zeroecc_shifted, self.amp22_zeroecc, allowExtrapolation=True
+        )
         self.res_amp22 = self.amp22 - self.amp22_zeroecc_interp
         self.omega22_zeroecc_interp = self.interp(
-            self.t, self.t_zeroecc_shifted, self.omega22_zeroecc,
-            allowExtrapolation=True)
-        self.res_omega22 = (self.omega22 - self.omega22_zeroecc_interp)
+            self.t,
+            self.t_zeroecc_shifted,
+            self.omega22_zeroecc,
+            allowExtrapolation=True,
+        )
+        self.res_omega22 = self.omega22 - self.omega22_zeroecc_interp
 
     def get_t_average_for_orbit_averaged_omega22(self):
         """Get the times associated with the fref for orbit averaged omega22.
@@ -1974,23 +2115,23 @@ class eccDefinition:
         """
         # get the mid points between the pericenters as avg time for
         # pericenters
-        self.t_average_pericenters \
-            = 0.5 * (self.t[self.pericenters_location][:-1]
-                     + self.t[self.pericenters_location][1:])
+        self.t_average_pericenters = 0.5 * (
+            self.t[self.pericenters_location][:-1]
+            + self.t[self.pericenters_location][1:]
+        )
         # get the mid points between the apocenters as avg time for
         # apocenters
-        self.t_average_apocenters \
-            = 0.5 * (self.t[self.apocenters_location][:-1]
-                     + self.t[self.apocenters_location][1:])
+        self.t_average_apocenters = 0.5 * (
+            self.t[self.apocenters_location][:-1] + self.t[self.apocenters_location][1:]
+        )
         t_for_orbit_averaged_omega22 = np.append(
-            self.t_average_apocenters,
-            self.t_average_pericenters)
-        sorted_idx_for_orbit_averaged_omega22 = np.argsort(
-            t_for_orbit_averaged_omega22)
+            self.t_average_apocenters, self.t_average_pericenters
+        )
+        sorted_idx_for_orbit_averaged_omega22 = np.argsort(t_for_orbit_averaged_omega22)
         t_for_orbit_averaged_omega22 = t_for_orbit_averaged_omega22[
-            sorted_idx_for_orbit_averaged_omega22]
-        return [t_for_orbit_averaged_omega22,
-                sorted_idx_for_orbit_averaged_omega22]
+            sorted_idx_for_orbit_averaged_omega22
+        ]
+        return [t_for_orbit_averaged_omega22, sorted_idx_for_orbit_averaged_omega22]
 
     def get_orbit_averaged_omega22_between_pericenters(self):
         """Get orbital average of omega22 between two consecutive pericenters.
@@ -2009,8 +2150,9 @@ class eccDefinition:
         as taking the difference of phase22(t) between t[i] and t[i+1]
         <omega22>_i = (phase22[t[i+1]] - phase22[t[i]])/(t[i+1] - t[i])
         """
-        return (np.diff(self.phase22[self.pericenters_location]) /
-                np.diff(self.t[self.pericenters_location]))
+        return np.diff(self.phase22[self.pericenters_location]) / np.diff(
+            self.t[self.pericenters_location]
+        )
 
     def get_orbit_averaged_omega22_between_apocenters(self):
         """Get orbital average of omega22 between two consecutive apocenters.
@@ -2019,8 +2161,9 @@ class eccDefinition:
         is the same as that between pericenters. See documentation of
         `get_orbit_averaged_omega22_between_pericenters` for details.
         """
-        return (np.diff(self.phase22[self.apocenters_location]) /
-                np.diff(self.t[self.apocenters_location]))
+        return np.diff(self.phase22[self.apocenters_location]) / np.diff(
+            self.t[self.apocenters_location]
+        )
 
     def compute_orbit_averaged_omega22_between_extrema(self, t):
         """Compute reference frequency by orbital averaging omega22 between extrema.
@@ -2047,45 +2190,52 @@ class eccDefinition:
         """
         # get orbit averaged omega22 between consecutive pericenrers
         # and consecutive apoceneters
-        self.orbit_averaged_omega22_pericenters \
-            = self.get_orbit_averaged_omega22_between_pericenters()
-        self.orbit_averaged_omega22_apocenters \
-            = self.get_orbit_averaged_omega22_between_apocenters()
+        self.orbit_averaged_omega22_pericenters = (
+            self.get_orbit_averaged_omega22_between_pericenters()
+        )
+        self.orbit_averaged_omega22_apocenters = (
+            self.get_orbit_averaged_omega22_between_apocenters()
+        )
         # check monotonicity of the omega22 average
         self.check_monotonicity_of_omega22_average(
             self.orbit_averaged_omega22_pericenters,
-            "omega22 averaged [pericenter to pericenter]")
+            "omega22 averaged [pericenter to pericenter]",
+        )
         self.check_monotonicity_of_omega22_average(
             self.orbit_averaged_omega22_apocenters,
-            "omega22 averaged [apocenter to apocenter]")
+            "omega22 averaged [apocenter to apocenter]",
+        )
         # combine the average omega22 between consecutive pericenters and
         # consecutive apocenters
         orbit_averaged_omega22 = np.append(
             self.orbit_averaged_omega22_apocenters,
-            self.orbit_averaged_omega22_pericenters)
+            self.orbit_averaged_omega22_pericenters,
+        )
 
         # get the times associated to the orbit averaged omega22
         if not hasattr(self, "t_for_orbit_averaged_omega22"):
-            self.t_for_orbit_averaged_omega22,\
-                self.sorted_idx_for_orbit_averaged_omega22\
-                = self.get_t_average_for_orbit_averaged_omega22()
+            (
+                self.t_for_orbit_averaged_omega22,
+                self.sorted_idx_for_orbit_averaged_omega22,
+            ) = self.get_t_average_for_orbit_averaged_omega22()
         # We now sort omega22_average using
         # `sorted_idx_for_orbit_averaged_omega22`, the same array of indices
         # that was used to obtain the `t_for_orbit_averaged_omega22` in the
         # function `eccDefinition.get_t_average_for_orbit_averaged_omega22`.
         orbit_averaged_omega22 = orbit_averaged_omega22[
-            self.sorted_idx_for_orbit_averaged_omega22]
+            self.sorted_idx_for_orbit_averaged_omega22
+        ]
         # check that omega22_average in strictly monotonic
         self.check_monotonicity_of_omega22_average(
             orbit_averaged_omega22,
             "omega22 averaged [apocenter to apocenter] and "
-            "[pericenter to pericenter]")
-        return self.interp(
-            t, self.t_for_orbit_averaged_omega22, orbit_averaged_omega22)
+            "[pericenter to pericenter]",
+        )
+        return self.interp(t, self.t_for_orbit_averaged_omega22, orbit_averaged_omega22)
 
-    def check_monotonicity_of_omega22_average(self,
-                                              omega22_average,
-                                              description="omega22 average"):
+    def check_monotonicity_of_omega22_average(
+        self, omega22_average, description="omega22 average"
+    ):
         """Check that omega average is monotonically increasing.
 
         Parameters
@@ -2096,69 +2246,78 @@ class eccDefinition:
             String to describe what the the which omega22 average we are
             looking at.
         """
-        idx_non_monotonic = np.where(
-            np.diff(omega22_average) <= 0)[0]
+        idx_non_monotonic = np.where(np.diff(omega22_average) <= 0)[0]
         if len(idx_non_monotonic) > 0:
             first_idx = idx_non_monotonic[0]
             change_at_first_idx = (
-                omega22_average[first_idx+1]
-                - omega22_average[first_idx])
+                omega22_average[first_idx + 1] - omega22_average[first_idx]
+            )
             if self.debug_plots:
                 style = "APS"
                 use_fancy_plotsettings(style=style)
                 nrows = 4
                 fig, axes = plt.subplots(
                     nrows=nrows,
-                    figsize=(figWidthsTwoColDict[style],
-                             nrows * figHeightsDict[style]))
-                axes[0].plot(omega22_average, marker=".",
-                             c=colorsDict["default"])
-                axes[1].plot(np.diff(omega22_average), marker=".",
-                             c=colorsDict["default"])
-                axes[2].plot(self.t_average_pericenters,
-                             self.orbit_averaged_omega22_pericenters,
-                             label=labelsDict["pericenters"],
-                             c=colorsDict["pericenter"],
-                             marker=".")
-                axes[2].plot(self.t_average_apocenters,
-                             self.orbit_averaged_omega22_apocenters,
-                             label=labelsDict["apocenters"],
-                             c=colorsDict["apocenter"],
-                             marker=".")
+                    figsize=(figWidthsTwoColDict[style], nrows * figHeightsDict[style]),
+                )
+                axes[0].plot(omega22_average, marker=".", c=colorsDict["default"])
+                axes[1].plot(
+                    np.diff(omega22_average), marker=".", c=colorsDict["default"]
+                )
+                axes[2].plot(
+                    self.t_average_pericenters,
+                    self.orbit_averaged_omega22_pericenters,
+                    label=labelsDict["pericenters"],
+                    c=colorsDict["pericenter"],
+                    marker=".",
+                )
+                axes[2].plot(
+                    self.t_average_apocenters,
+                    self.orbit_averaged_omega22_apocenters,
+                    label=labelsDict["apocenters"],
+                    c=colorsDict["apocenter"],
+                    marker=".",
+                )
                 axes[3].plot(self.t, self.omega22, c=colorsDict["default"])
-                axes[3].plot(self.t_pericenters,
-                             self.omega22[self.pericenters_location],
-                             c=colorsDict["pericenter"],
-                             label=labelsDict["pericenters"],
-                             marker=".")
-                axes[3].plot(self.t_apocenters,
-                             self.omega22[self.apocenters_location],
-                             c=colorsDict["apocenter"],
-                             label=labelsDict["apocenters"],
-                             marker=".")
+                axes[3].plot(
+                    self.t_pericenters,
+                    self.omega22[self.pericenters_location],
+                    c=colorsDict["pericenter"],
+                    label=labelsDict["pericenters"],
+                    marker=".",
+                )
+                axes[3].plot(
+                    self.t_apocenters,
+                    self.omega22[self.apocenters_location],
+                    c=colorsDict["apocenter"],
+                    label=labelsDict["apocenters"],
+                    marker=".",
+                )
                 axes[2].legend()
                 axes[2].set_ylabel(labelsDict["omega22_average"])
                 axes[3].legend()
-                axes[3].set_ylim(0,)
+                axes[3].set_ylim(
+                    0,
+                )
                 axes[3].set_ylabel(labelsDict["omega22"])
                 axes[1].axhline(0, c=colorsDict["vline"])
                 axes[0].set_ylabel(labelsDict["omega22_average"])
-                axes[1].set_ylabel(
-                    fr"$\Delta$ {labelsDict['omega22_average']}")
-                axes[0].set_title(
-                    self.extra_kwargs["omega22_averaging_method"])
+                axes[1].set_ylabel(rf"$\Delta$ {labelsDict['omega22_average']}")
+                axes[0].set_title(self.extra_kwargs["omega22_averaging_method"])
                 fig.tight_layout()
                 figName = (
-                    "./gwecc_"
-                    f"{self.method}_{description.replace(' ', '_')}.pdf")
+                    "./gwecc_" f"{self.method}_{description.replace(' ', '_')}.pdf"
+                )
                 # fig.savefig(figName)
                 self.save_debug_fig(fig, figName)
                 plt.close(fig)
                 plot_info = f"See the plot saved as {figName}."
             else:
-                plot_info = ("For more verbose output use `debug_level=1` and "
-                             "for diagnostic plot use `debug_plots=True` in "
-                             "extra_kwargs")
+                plot_info = (
+                    "For more verbose output use `debug_level=1` and "
+                    "for diagnostic plot use `debug_plots=True` in "
+                    "extra_kwargs"
+                )
             raise Exception(
                 f"{description} are non-monotonic.\n"
                 f"First non-monotonicity occurs at peak number {first_idx},"
@@ -2171,7 +2330,8 @@ class eccDefinition:
                 "Possible fixes: \n"
                 "   - Increase sampling rate of data\n"
                 "   - Add to extra_kwargs the option 'treat_mid_points_between"
-                "_pericenters_as_apocenters': True")
+                "_pericenters_as_apocenters': True"
+            )
 
     def compute_mean_of_extrema_interpolants(self, t):
         """Find omega22 average by taking mean of the extrema interpolants".
@@ -2180,20 +2340,20 @@ class eccDefinition:
         and apocenters to get
         omega22_average = 0.5 * (omega22_p(t) + omega22_a(t))
         """
-        return 0.5 * (self.omega22_pericenters_interp(t) +
-                      self.omega22_apocenters_interp(t))
+        return 0.5 * (
+            self.omega22_pericenters_interp(t) + self.omega22_apocenters_interp(t)
+        )
 
     def compute_omega22_zeroecc(self, t):
         """Find omega22 from zeroecc data."""
-        return self.interp(
-            t, self.t_zeroecc_shifted, self.omega22_zeroecc)
+        return self.interp(t, self.t_zeroecc_shifted, self.omega22_zeroecc)
 
     def get_available_omega22_averaging_methods(self):
         """Return available omega22 averaging methods."""
         available_methods = {
             "mean_of_extrema_interpolants": self.compute_mean_of_extrema_interpolants,
             "orbit_averaged_omega22": self.compute_orbit_averaged_omega22_between_extrema,
-            "omega22_zeroecc": self.compute_omega22_zeroecc
+            "omega22_zeroecc": self.compute_omega22_zeroecc,
         }
         return available_methods
 
@@ -2257,21 +2417,22 @@ class eccDefinition:
             self.tmin_for_fref = self.tmin
             self.tmax_for_fref = self.tmax
         else:
-            self.t_for_orbit_averaged_omega22, self.sorted_idx_for_orbit_averaged_omega22 = \
-                self.get_t_average_for_orbit_averaged_omega22()
+            (
+                self.t_for_orbit_averaged_omega22,
+                self.sorted_idx_for_orbit_averaged_omega22,
+            ) = self.get_t_average_for_orbit_averaged_omega22()
             # for orbit averaged omega22, the associated times are obtained
             # using the temporal midpoints of the extrema, therefore we need to
             # make sure that we use only those times that fall within tmin and
             # tmax.
-            self.tmin_for_fref = max(self.tmin,
-                                     min(self.t_for_orbit_averaged_omega22))
-            self.tmax_for_fref = min(self.tmax,
-                                     max(self.t_for_orbit_averaged_omega22))
+            self.tmin_for_fref = max(self.tmin, min(self.t_for_orbit_averaged_omega22))
+            self.tmax_for_fref = min(self.tmax, max(self.t_for_orbit_averaged_omega22))
         t_for_omega22_average = self.t[
-            np.logical_and(self.t >= self.tmin_for_fref,
-                           self.t <= self.tmax_for_fref)]
-        omega22_average = self.available_averaging_methods[
-            method](t_for_omega22_average)
+            np.logical_and(self.t >= self.tmin_for_fref, self.t <= self.tmax_for_fref)
+        ]
+        omega22_average = self.available_averaging_methods[method](
+            t_for_omega22_average
+        )
         return t_for_omega22_average, omega22_average
 
     def compute_tref_in_and_fref_out_from_fref_in(self, fref_in):
@@ -2330,26 +2491,34 @@ class eccDefinition:
             # of omega22_average.
             # We get omega22_average by evaluating the omega22_average(t)
             # on t, from tmin_for_fref to tmax_for_fref
-            self.t_for_omega22_average, self.omega22_average = self.get_omega22_average(method)
+            self.t_for_omega22_average, self.omega22_average = self.get_omega22_average(
+                method
+            )
 
             # check that omega22_average is monotonically increasing
             self.check_monotonicity_of_omega22_average(
-                self.omega22_average, "Interpolated omega22_average")
+                self.omega22_average, "Interpolated omega22_average"
+            )
 
             # Get tref_in using interpolation
-            tref_in = self.interp(fref_out,
-                                  self.omega22_average/(2 * np.pi),
-                                  self.t_for_omega22_average)
+            tref_in = self.interp(
+                fref_out, self.omega22_average / (2 * np.pi), self.t_for_omega22_average
+            )
             # check if tref_in is monotonically increasing
             if any(np.diff(tref_in) <= 0):
-                debug_message(f"tref_in from fref_in using method {method} is"
-                              " not monotonically increasing.",
-                              self.debug_level, important=False)
+                debug_message(
+                    f"tref_in from fref_in using method {method} is"
+                    " not monotonically increasing.",
+                    self.debug_level,
+                    important=False,
+                )
             return tref_in, fref_out
         else:
-            raise KeyError(f"Omega22 averaging method {method} does not exist."
-                           " Must be one of "
-                           f"{list(self.available_averaging_methods.keys())}")
+            raise KeyError(
+                f"Omega22 averaging method {method} does not exist."
+                " Must be one of "
+                f"{list(self.available_averaging_methods.keys())}"
+            )
 
     def get_fref_bounds(self, method=None):
         """Get the allowed min and max reference frequency of 22 mode.
@@ -2379,9 +2548,13 @@ class eccDefinition:
             frequency.
         """
         if self.omega22_average is None:
-            self.t_for_omega22_average, self.omega22_average = self.get_omega22_average(method)
-        return [min(self.omega22_average)/2/np.pi,
-                max(self.omega22_average)/2/np.pi]
+            self.t_for_omega22_average, self.omega22_average = self.get_omega22_average(
+                method
+            )
+        return [
+            min(self.omega22_average) / 2 / np.pi,
+            max(self.omega22_average) / 2 / np.pi,
+        ]
 
     def get_fref_out(self, fref_in, method):
         """Get fref_out from fref_in that falls within the valid average f22 range.
@@ -2401,24 +2574,25 @@ class eccDefinition:
             fref_in >= fref_min && fref_in < fref_max
         """
         fref_min, fref_max = self.get_fref_bounds(method)
-        fref_out = fref_in[
-            np.logical_and(fref_in >= fref_min,
-                           fref_in < fref_max)]
+        fref_out = fref_in[np.logical_and(fref_in >= fref_min, fref_in < fref_max)]
         if len(fref_out) == 0:
             self.check_input_limits(fref_in, fref_min, fref_max)
-            raise Exception("fref_out is empty. This can happen if the "
-                            "waveform has insufficient identifiable "
-                            "pericenters/apocenters.")
+            raise Exception(
+                "fref_out is empty. This can happen if the "
+                "waveform has insufficient identifiable "
+                "pericenters/apocenters."
+            )
         return fref_out
 
     def make_diagnostic_plots(
-            self,
-            add_help_text=True,
-            usetex=False,
-            style=None,
-            use_fancy_settings=True,
-            twocol=False,
-            **kwargs):
+        self,
+        add_help_text=True,
+        usetex=False,
+        style=None,
+        use_fancy_settings=True,
+        twocol=False,
+        **kwargs,
+    ):
         """Make diagnostic plots for the eccDefinition method.
 
         We plot different quantities to asses how well our eccentricity
@@ -2497,13 +2671,15 @@ class eccDefinition:
             Axes object.
         """
         # Make a list of plots we want to add
-        list_of_plots = [self.plot_eccentricity,
-                         self.plot_mean_anomaly,
-                         self.plot_omega22,
-                         self.plot_data_used_for_finding_extrema,
-                         self.plot_decc_dt,
-                         self.plot_phase_diff_ratio_between_extrema,
-                         self.plot_omega22_average]
+        list_of_plots = [
+            self.plot_eccentricity,
+            self.plot_mean_anomaly,
+            self.plot_omega22,
+            self.plot_data_used_for_finding_extrema,
+            self.plot_decc_dt,
+            self.plot_phase_diff_ratio_between_extrema,
+            self.plot_omega22_average,
+        ]
         if "hlm_zeroecc" in self.dataDict:
             # add residual amp22 plot
             if self.method != "ResidualAmplitude":
@@ -2516,14 +2692,14 @@ class eccDefinition:
         if style is None:
             style = "APS" if twocol else "Notebook"
         # Initiate figure, axis
-        nrows = int(np.ceil(len(list_of_plots) / 2)) if twocol else len(
-            list_of_plots)
-        figsize = (figWidthsTwoColDict[style],
-                   figHeightsDict[style] * nrows)
-        default_kwargs = {"nrows": nrows,
-                          "ncols": 2 if twocol else 1,
-                          "figsize": figsize,
-                          "sharex": True}
+        nrows = int(np.ceil(len(list_of_plots) / 2)) if twocol else len(list_of_plots)
+        figsize = (figWidthsTwoColDict[style], figHeightsDict[style] * nrows)
+        default_kwargs = {
+            "nrows": nrows,
+            "ncols": 2 if twocol else 1,
+            "figsize": figsize,
+            "sharex": True,
+        }
         for key in default_kwargs:
             if key not in kwargs:
                 kwargs.update({key: default_kwargs[key]})
@@ -2539,7 +2715,8 @@ class eccDefinition:
                 axarr[idx],
                 add_help_text=add_help_text,
                 usetex=usetex,
-                use_fancy_settings=False)
+                use_fancy_settings=False,
+            )
             axarr[idx].tick_params(labelbottom=True)
             axarr[idx].set_xlabel("")
         # set xlabel in the last row
@@ -2547,21 +2724,22 @@ class eccDefinition:
         if twocol:
             axarr[-2].set_xlabel(labelsDict["t"])
         # delete empty subplots
-        for idx, ax in enumerate(axarr[len(list_of_plots):]):
+        for idx, ax in enumerate(axarr[len(list_of_plots) :]):
             fig.delaxes(ax)
         fig.tight_layout()
         return fig, axarr
 
     def plot_eccentricity(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            add_vline_at_tref=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        add_vline_at_tref=True,
+        **kwargs,
+    ):
         """Plot measured ecc as function of time.
 
         Parameters:
@@ -2606,17 +2784,19 @@ class eccDefinition:
             if key not in kwargs:
                 kwargs.update({key: default_kwargs[key]})
         if self.ecc_for_checks is None:
-            self.ecc_for_checks = self.compute_eccentricity(
-                self.t_for_checks)
+            self.ecc_for_checks = self.compute_eccentricity(self.t_for_checks)
         ax.plot(self.t_for_checks, self.ecc_for_checks, **kwargs)
         # add a vertical line in case of scalar tref_out/fref_out indicating
         # the corresponding reference time
         if self.tref_out.size == 1 and add_vline_at_tref:
-            ax.axvline(self.tref_out, c=colorsDict["pericentersvline"], ls=":",
-                       label=labelsDict["t_ref"])
+            ax.axvline(
+                self.tref_out,
+                c=colorsDict["pericentersvline"],
+                ls=":",
+                label=labelsDict["t_ref"],
+            )
             ax.plot(self.tref_out, self.eccentricity, ls="", marker=".")
-            ax.legend(frameon=True, handlelength=1, labelspacing=0.2,
-                      columnspacing=1)
+            ax.legend(frameon=True, handlelength=1, labelspacing=0.2, columnspacing=1)
         ax.set_xlabel(labelsDict["t"])
         ax.set_ylabel(labelsDict["eccentricity"])
         if fig is None or ax is None:
@@ -2625,14 +2805,15 @@ class eccDefinition:
             return ax
 
     def plot_decc_dt(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        **kwargs,
+    ):
         """Plot decc_dt as function of time to check monotonicity.
 
         If decc_dt becomes positive, ecc(t) is not monotonically decreasing.
@@ -2676,7 +2857,8 @@ class eccDefinition:
                 kwargs.update({key: default_kwargs[key]})
         if self.decc_dt_for_checks is None:
             self.decc_dt_for_checks = self.derivative_of_eccentricity(
-                self.t_for_checks, n=1)
+                self.t_for_checks, n=1
+            )
         ax.plot(self.t_for_checks, self.decc_dt_for_checks, **kwargs)
         ax.set_xlabel(labelsDict["t"])
         ax.set_ylabel(labelsDict["dedt"])
@@ -2687,9 +2869,10 @@ class eccDefinition:
                 ("We expect decc/dt to be always negative"),
                 ha="left",
                 va="bottom",
-                transform=ax.transAxes)
+                transform=ax.transAxes,
+            )
         # change ticks to scientific notation
-        ax.ticklabel_format(style='sci', scilimits=(-3, 4), axis='y')
+        ax.ticklabel_format(style="sci", scilimits=(-3, 4), axis="y")
         # add line to indicate y = 0
         ax.axhline(0, ls="--")
         if fig is None or ax is None:
@@ -2698,15 +2881,16 @@ class eccDefinition:
             return ax
 
     def plot_mean_anomaly(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            add_vline_at_tref=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        add_vline_at_tref=True,
+        **kwargs,
+    ):
         """Plot measured mean anomaly as function of time.
 
         Parameters:
@@ -2751,17 +2935,20 @@ class eccDefinition:
         for key in default_kwargs:
             if key not in kwargs:
                 kwargs.update({key: default_kwargs[key]})
-        ax.plot(self.t_for_checks,
-                self.compute_mean_anomaly(self.t_for_checks),
-                **kwargs)
+        ax.plot(
+            self.t_for_checks, self.compute_mean_anomaly(self.t_for_checks), **kwargs
+        )
         # add a vertical line in case of scalar tref_out/fref_out indicating the
         # corresponding reference time
         if self.tref_out.size == 1 and add_vline_at_tref:
-            ax.axvline(self.tref_out, c=colorsDict["pericentersvline"], ls=":",
-                       label=labelsDict["t_ref"])
+            ax.axvline(
+                self.tref_out,
+                c=colorsDict["pericentersvline"],
+                ls=":",
+                label=labelsDict["t_ref"],
+            )
             ax.plot(self.tref_out, self.mean_anomaly, ls="", marker=".")
-            ax.legend(frameon=True, handlelength=1, labelspacing=0.2,
-                      columnspacing=1)
+            ax.legend(frameon=True, handlelength=1, labelspacing=0.2, columnspacing=1)
         ax.set_xlabel(labelsDict["t"])
         ax.set_ylabel(labelsDict["mean_anomaly"])
         if fig is None or ax is None:
@@ -2770,14 +2957,15 @@ class eccDefinition:
             return ax
 
     def plot_omega22(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        **kwargs,
+    ):
         """Plot omega22, the locations of the apocenters and pericenters.
 
         Also plots their corresponding interpolants.
@@ -2818,26 +3006,37 @@ class eccDefinition:
             figNew, ax = plt.subplots(figsize=(figWidthsTwoColDict[style], 4))
         if use_fancy_settings:
             use_fancy_plotsettings(usetex=usetex, style=style)
-        ax.plot(self.t_for_checks,
-                self.omega22_pericenters_interp(self.t_for_checks),
-                c=colorsDict["pericenter"],
-                label=labelsDict["omega22_pericenters"],
-                **kwargs)
-        ax.plot(self.t_for_checks, self.omega22_apocenters_interp(
-            self.t_for_checks),
-                c=colorsDict["apocenter"],
-                label=labelsDict["omega22_apocenters"],
-                **kwargs)
-        ax.plot(self.t, self.omega22,
-                c=colorsDict["default"], label=labelsDict["omega22"])
-        ax.plot(self.t[self.pericenters_location],
-                self.omega22[self.pericenters_location],
-                c=colorsDict["pericenter"],
-                marker=".", ls="")
-        ax.plot(self.t[self.apocenters_location],
-                self.omega22[self.apocenters_location],
-                c=colorsDict["apocenter"],
-                marker=".", ls="")
+        ax.plot(
+            self.t_for_checks,
+            self.omega22_pericenters_interp(self.t_for_checks),
+            c=colorsDict["pericenter"],
+            label=labelsDict["omega22_pericenters"],
+            **kwargs,
+        )
+        ax.plot(
+            self.t_for_checks,
+            self.omega22_apocenters_interp(self.t_for_checks),
+            c=colorsDict["apocenter"],
+            label=labelsDict["omega22_apocenters"],
+            **kwargs,
+        )
+        ax.plot(
+            self.t, self.omega22, c=colorsDict["default"], label=labelsDict["omega22"]
+        )
+        ax.plot(
+            self.t[self.pericenters_location],
+            self.omega22[self.pericenters_location],
+            c=colorsDict["pericenter"],
+            marker=".",
+            ls="",
+        )
+        ax.plot(
+            self.t[self.apocenters_location],
+            self.omega22[self.apocenters_location],
+            c=colorsDict["apocenter"],
+            marker=".",
+            ls="",
+        )
         # set reasonable ylims
         ymin = min(self.omega22)
         ymax = max(self.omega22)
@@ -2849,39 +3048,35 @@ class eccDefinition:
                 help_text = (
                     r"\noindent To avoid extrapolation, first and last\\"
                     r"extrema are excluded when\\"
-                    r"evaluating $\omega_{a}$/$\omega_{p}$ interpolants")
+                    r"evaluating $\omega_{a}$/$\omega_{p}$ interpolants"
+                )
             else:
                 help_text = (
                     "To avoid extrapolation, first and last\n"
                     "extrema are excluded when\n"
-                    r"evaluating $\omega_{a}$/$\omega_{p}$ interpolants")
-            ax.text(
-                0.22,
-                0.98,
-                help_text,
-                ha="left",
-                va="top",
-                transform=ax.transAxes)
+                    r"evaluating $\omega_{a}$/$\omega_{p}$ interpolants"
+                )
+            ax.text(0.22, 0.98, help_text, ha="left", va="top", transform=ax.transAxes)
         ax.set_xlabel(r"$t$")
         ax.set_ylabel(labelsDict["omega22"])
-        ax.legend(frameon=True,
-                  handlelength=1, labelspacing=0.2, columnspacing=1)
+        ax.legend(frameon=True, handlelength=1, labelspacing=0.2, columnspacing=1)
         if fig is None or ax is None:
             return figNew, ax
         else:
             return ax
 
     def plot_omega22_average(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            plot_omega22=True,
-            plot_orbit_averaged_omega22_between_extrema=False,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        plot_omega22=True,
+        plot_orbit_averaged_omega22_between_extrema=False,
+        **kwargs,
+    ):
         """Plot omega22_average.
 
         Parameters:
@@ -2926,30 +3121,45 @@ class eccDefinition:
         # check if omega22_average is already available. If not
         # available, compute it.
         if self.omega22_average is None:
-            self.t_for_omega22_average, self.omega22_average = self.get_omega22_average()
-        ax.plot(self.t_for_omega22_average,
-                self.omega22_average,
-                c=colorsDict["default"],
-                label="omega22_average",
-                **kwargs)
+            self.t_for_omega22_average, self.omega22_average = (
+                self.get_omega22_average()
+            )
+        ax.plot(
+            self.t_for_omega22_average,
+            self.omega22_average,
+            c=colorsDict["default"],
+            label="omega22_average",
+            **kwargs,
+        )
         if plot_omega22:
-            ax.plot(self.t, self.omega22,
-                    c='k',
-                    alpha=0.4,
-                    lw=0.5,
-                    label=labelsDict["omega22"])
-        if (self.extra_kwargs["omega22_averaging_method"] == "orbit_averaged_omega22" and
-            plot_orbit_averaged_omega22_between_extrema):
-            ax.plot(self.t_average_apocenters,
-                    self.orbit_averaged_omega22_apocenters,
-                    c=colorsDict["apocenter"],
-                    marker=".", ls="",
-                    label=labelsDict["orbit_averaged_omega22_apocenters"])
-            ax.plot(self.t_average_pericenters,
-                    self.orbit_averaged_omega22_pericenters,
-                    c=colorsDict["pericenter"],
-                    marker=".", ls="",
-                    label=labelsDict["orbit_averaged_omega22_pericenters"])
+            ax.plot(
+                self.t,
+                self.omega22,
+                c="k",
+                alpha=0.4,
+                lw=0.5,
+                label=labelsDict["omega22"],
+            )
+        if (
+            self.extra_kwargs["omega22_averaging_method"] == "orbit_averaged_omega22"
+            and plot_orbit_averaged_omega22_between_extrema
+        ):
+            ax.plot(
+                self.t_average_apocenters,
+                self.orbit_averaged_omega22_apocenters,
+                c=colorsDict["apocenter"],
+                marker=".",
+                ls="",
+                label=labelsDict["orbit_averaged_omega22_apocenters"],
+            )
+            ax.plot(
+                self.t_average_pericenters,
+                self.orbit_averaged_omega22_pericenters,
+                c=colorsDict["pericenter"],
+                marker=".",
+                ls="",
+                label=labelsDict["orbit_averaged_omega22_pericenters"],
+            )
         # set reasonable ylims
         ymin = min(self.omega22)
         ymax = max(self.omega22)
@@ -2962,27 +3172,27 @@ class eccDefinition:
             ax.text(
                 0.35,
                 0.98,
-                (r"omega22_average should be "
-                 "monotonically increasing."),
+                (r"omega22_average should be " "monotonically increasing."),
                 ha="left",
                 va="top",
-                transform=ax.transAxes)
-        ax.legend(frameon=True,
-                  handlelength=1, labelspacing=0.2, columnspacing=1)
+                transform=ax.transAxes,
+            )
+        ax.legend(frameon=True, handlelength=1, labelspacing=0.2, columnspacing=1)
         if fig is None or ax is None:
             return figNew, ax
         else:
             return ax
 
     def plot_amp22(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        **kwargs,
+    ):
         """Plot amp22, the locations of the apocenters and pericenters.
 
         This would show if the method is missing any pericenters/apocenters or
@@ -3019,16 +3229,23 @@ class eccDefinition:
             figNew, ax = plt.subplots(figsize=(figWidthsTwoColDict[style], 4))
         if use_fancy_settings:
             use_fancy_plotsettings(usetex=usetex, style=style)
-        ax.plot(self.t, self.amp22,
-                c=colorsDict["default"], label=labelsDict["amp22"])
-        ax.plot(self.t[self.pericenters_location],
-                self.amp22[self.pericenters_location],
-                c=colorsDict["pericenter"],
-                marker=".", ls="", label=labelsDict["pericenters"])
-        ax.plot(self.t[self.apocenters_location],
-                self.amp22[self.apocenters_location],
-                c=colorsDict["apocenter"],
-                marker=".", ls="", label=labelsDict["apocenters"])
+        ax.plot(self.t, self.amp22, c=colorsDict["default"], label=labelsDict["amp22"])
+        ax.plot(
+            self.t[self.pericenters_location],
+            self.amp22[self.pericenters_location],
+            c=colorsDict["pericenter"],
+            marker=".",
+            ls="",
+            label=labelsDict["pericenters"],
+        )
+        ax.plot(
+            self.t[self.apocenters_location],
+            self.amp22[self.apocenters_location],
+            c=colorsDict["apocenter"],
+            marker=".",
+            ls="",
+            label=labelsDict["apocenters"],
+        )
         # set reasonable ylims
         ymin = min(self.amp22)
         ymax = max(self.amp22)
@@ -3042,14 +3259,15 @@ class eccDefinition:
             return ax
 
     def plot_phase_diff_ratio_between_extrema(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        **kwargs,
+    ):
         """Plot phase diff ratio between consecutive extrema as function of time.
 
         Plots deltaPhi_orb(i)/deltaPhi_orb(i-1), where deltaPhi_orb is the
@@ -3094,53 +3312,72 @@ class eccDefinition:
             use_fancy_plotsettings(usetex=usetex, style=style)
         tpericenters = self.t[self.pericenters_location[1:]]
         if self.orb_phase_diff_ratio_at_pericenters is None:
-            self.orb_phase_diff_at_pericenters, \
-                self.orb_phase_diff_ratio_at_pericenters \
-                = self.check_extrema_separation(self.pericenters_location,
-                                                "pericenters",
-                                                always_return=True)
-            self.orb_phase_diff_at_apocenters, \
-                self.orb_phase_diff_ratio_at_apocenters \
-                = self.check_extrema_separation(self.apocenters_location,
-                                                "apocenters",
-                                                always_return=True)
-        ax.plot(tpericenters[1:], self.orb_phase_diff_ratio_at_pericenters[1:],
-                c=colorsDict["pericenter"],
-                marker=".", label="Pericenter phase diff ratio")
+            (
+                self.orb_phase_diff_at_pericenters,
+                self.orb_phase_diff_ratio_at_pericenters,
+            ) = self.check_extrema_separation(
+                self.pericenters_location, "pericenters", always_return=True
+            )
+            (
+                self.orb_phase_diff_at_apocenters,
+                self.orb_phase_diff_ratio_at_apocenters,
+            ) = self.check_extrema_separation(
+                self.apocenters_location, "apocenters", always_return=True
+            )
+        ax.plot(
+            tpericenters[1:],
+            self.orb_phase_diff_ratio_at_pericenters[1:],
+            c=colorsDict["pericenter"],
+            marker=".",
+            label="Pericenter phase diff ratio",
+        )
         tapocenters = self.t[self.apocenters_location[1:]]
-        ax.plot(tapocenters[1:], self.orb_phase_diff_ratio_at_apocenters[1:],
-                c=colorsDict["apocenter"],
-                marker=".", label="Apocenter phase diff ratio")
+        ax.plot(
+            tapocenters[1:],
+            self.orb_phase_diff_ratio_at_apocenters[1:],
+            c=colorsDict["apocenter"],
+            marker=".",
+            label="Apocenter phase diff ratio",
+        )
         ax.set_xlabel(labelsDict["t"])
         ax.set_ylabel(r"$\Delta \Phi_{orb}[i] / \Delta \Phi_{orb}[i-1]$")
         if add_help_text:
             ax.text(
                 0.5,
                 0.98,
-                ("If phase difference ratio exceeds 1.5,\n"
-                 "there may be missing extrema.\n"
-                 "If the ratio falls below 0.5,\n"
-                 "there may be spurious extrema."),
+                (
+                    "If phase difference ratio exceeds 1.5,\n"
+                    "there may be missing extrema.\n"
+                    "If the ratio falls below 0.5,\n"
+                    "there may be spurious extrema."
+                ),
                 ha="center",
                 va="top",
-                transform=ax.transAxes)
+                transform=ax.transAxes,
+            )
         ax.set_title("Ratio of phase difference between consecutive extrema")
-        ax.legend(frameon=True, loc="center left",
-                  handlelength=1, labelspacing=0.2, columnspacing=1)
+        ax.legend(
+            frameon=True,
+            loc="center left",
+            handlelength=1,
+            labelspacing=0.2,
+            columnspacing=1,
+        )
         if fig is None or ax is None:
             return figNew, ax
         else:
             return ax
 
     def plot_residual_omega22(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        **kwargs,
+    ):
         """Plot residual omega22, the locations of the apocenters and pericenters.
 
         Useful to look for bad omega22 data near merger.
@@ -3181,14 +3418,22 @@ class eccDefinition:
         if use_fancy_settings:
             use_fancy_plotsettings(usetex=usetex, style=style)
         ax.plot(self.t, self.res_omega22, c=colorsDict["default"])
-        ax.plot(self.t[self.pericenters_location],
-                self.res_omega22[self.pericenters_location],
-                marker=".", ls="", label=labelsDict["pericenters"],
-                c=colorsDict["pericenter"])
-        ax.plot(self.t[self.apocenters_location],
-                self.res_omega22[self.apocenters_location],
-                marker=".", ls="", label=labelsDict["apocenters"],
-                c=colorsDict["apocenter"])
+        ax.plot(
+            self.t[self.pericenters_location],
+            self.res_omega22[self.pericenters_location],
+            marker=".",
+            ls="",
+            label=labelsDict["pericenters"],
+            c=colorsDict["pericenter"],
+        )
+        ax.plot(
+            self.t[self.apocenters_location],
+            self.res_omega22[self.apocenters_location],
+            marker=".",
+            ls="",
+            label=labelsDict["apocenters"],
+            c=colorsDict["apocenter"],
+        )
         # set reasonable ylims
         ymin = min(self.res_omega22)
         ymax = max(self.res_omega22)
@@ -3198,22 +3443,28 @@ class eccDefinition:
         ax.set_ylim(-ylim - pad, ylim + pad)
         ax.set_xlabel(labelsDict["t"])
         ax.set_ylabel(labelsDict["res_omega22"])
-        ax.legend(frameon=True, loc="center left",
-                  handlelength=1, labelspacing=0.2, columnspacing=1)
+        ax.legend(
+            frameon=True,
+            loc="center left",
+            handlelength=1,
+            labelspacing=0.2,
+            columnspacing=1,
+        )
         if fig is None or ax is None:
             return figNew, ax
         else:
             return ax
 
     def plot_residual_amp22(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        **kwargs,
+    ):
         """Plot residual amp22, the locations of the apocenters and pericenters.
 
         Parameters:
@@ -3251,14 +3502,22 @@ class eccDefinition:
         if use_fancy_settings:
             use_fancy_plotsettings(usetex=usetex, style=style)
         ax.plot(self.t, self.res_amp22, c=colorsDict["default"])
-        ax.plot(self.t[self.pericenters_location],
-                self.res_amp22[self.pericenters_location],
-                c=colorsDict["pericenter"],
-                marker=".", ls="", label=labelsDict["pericenters"])
-        ax.plot(self.t[self.apocenters_location],
-                self.res_amp22[self.apocenters_location],
-                c=colorsDict["apocenter"],
-                marker=".", ls="", label=labelsDict["apocenters"])
+        ax.plot(
+            self.t[self.pericenters_location],
+            self.res_amp22[self.pericenters_location],
+            c=colorsDict["pericenter"],
+            marker=".",
+            ls="",
+            label=labelsDict["pericenters"],
+        )
+        ax.plot(
+            self.t[self.apocenters_location],
+            self.res_amp22[self.apocenters_location],
+            c=colorsDict["apocenter"],
+            marker=".",
+            ls="",
+            label=labelsDict["apocenters"],
+        )
         # set reasonable ylims
         ymin = min(self.res_amp22)
         ymax = max(self.res_amp22)
@@ -3268,24 +3527,29 @@ class eccDefinition:
         ax.set_ylim(-ylim - pad, ylim + pad)
         ax.set_xlabel(labelsDict["t"])
         ax.set_ylabel(labelsDict["res_amp22"])
-        ax.legend(frameon=True, loc="center left", handlelength=1,
-                  labelspacing=0.2,
-                  columnspacing=1)
+        ax.legend(
+            frameon=True,
+            loc="center left",
+            handlelength=1,
+            labelspacing=0.2,
+            columnspacing=1,
+        )
         if fig is None or ax is None:
             return figNew, ax
         else:
             return ax
 
     def plot_data_used_for_finding_extrema(
-            self,
-            fig=None,
-            ax=None,
-            add_help_text=True,
-            usetex=False,
-            style="Notebook",
-            use_fancy_settings=True,
-            add_vline_at_tref=True,
-            **kwargs):
+        self,
+        fig=None,
+        ax=None,
+        add_help_text=True,
+        usetex=False,
+        style="Notebook",
+        use_fancy_settings=True,
+        add_vline_at_tref=True,
+        **kwargs,
+    ):
         """Plot the data that is being used.
 
         Also the locations of the apocenters and pericenters.
@@ -3327,20 +3591,23 @@ class eccDefinition:
             figNew, ax = plt.subplots(figsize=(figWidthsTwoColDict[style], 4))
         if use_fancy_settings:
             use_fancy_plotsettings(usetex=usetex, style=style)
-        ax.plot(self.t, self.data_for_finding_extrema,
-                c=colorsDict["default"])
+        ax.plot(self.t, self.data_for_finding_extrema, c=colorsDict["default"])
         ax.plot(
             self.t[self.pericenters_location],
             self.data_for_finding_extrema[self.pericenters_location],
             c=colorsDict["pericenter"],
-            marker=".", ls="",
-            label=labelsDict["pericenters"])
-        apocenters, = ax.plot(
+            marker=".",
+            ls="",
+            label=labelsDict["pericenters"],
+        )
+        (apocenters,) = ax.plot(
             self.t[self.apocenters_location],
             self.data_for_finding_extrema[self.apocenters_location],
             c=colorsDict["apocenter"],
-            marker=".", ls="",
-            label=labelsDict["apocenters"])
+            marker=".",
+            ls="",
+            label=labelsDict["apocenters"],
+        )
         # set reasonable ylims
         ymin = min(self.data_for_finding_extrema)
         ymax = max(self.data_for_finding_extrema)
@@ -3359,21 +3626,29 @@ class eccDefinition:
         # finding
         ax.axvline(
             self.t[-1],
-            c=colorsDict["vline"], ls="--",
-            label="Latest time used for finding extrema.")
+            c=colorsDict["vline"],
+            ls="--",
+            label="Latest time used for finding extrema.",
+        )
         # if tref_out/fref_out is scalar then add vertical line to indicate
         # corresponding reference time.
         if self.tref_out.size == 1 and add_vline_at_tref:
-            ax.axvline(self.tref_out, c=colorsDict["pericentersvline"], ls=":",
-                       label=labelsDict["t_ref"])
+            ax.axvline(
+                self.tref_out,
+                c=colorsDict["pericentersvline"],
+                ls=":",
+                label=labelsDict["t_ref"],
+            )
         # add legends
-        ax.legend(frameon=True, handlelength=1, labelspacing=0.2,
-                  columnspacing=1,
-                  loc="upper left")
+        ax.legend(
+            frameon=True,
+            handlelength=1,
+            labelspacing=0.2,
+            columnspacing=1,
+            loc="upper left",
+        )
         # set title
-        ax.set_title(
-            "Data being used for finding the extrema.",
-            ha="center")
+        ax.set_title("Data being used for finding the extrema.", ha="center")
         if fig is None or ax is None:
             return figNew, ax
         else:
@@ -3402,8 +3677,7 @@ class eccDefinition:
         """
         if fig_name is None:
             if type(fname) != str:
-                raise Exception("Message cannot be None when fname is not a"
-                                " string.")
+                raise Exception("Message cannot be None when fname is not a" " string.")
             fig_name = fname
         print(f"Saving debug plot to {fig_name}")
         fig.savefig(fname, format=format)
@@ -3431,14 +3705,11 @@ class eccDefinition:
         # loc[i+1])/2 where loc is the array that contains the pericenter
         # locations. This works because time steps are assumed to be uniform
         # and hence proportional to the time itself.
-        apocenters = (pericenters[:-1]
-                      + pericenters[1:]) / 2
+        apocenters = (pericenters[:-1] + pericenters[1:]) / 2
         apocenters = apocenters.astype(int)  # convert to ints
         return apocenters
 
-    def get_width_for_peak_finder_for_dimless_units(
-            self,
-            width_for_unit_timestep=50):
+    def get_width_for_peak_finder_for_dimless_units(self, width_for_unit_timestep=50):
         """Get the minimal value of `width` parameter for extrema finding.
 
         See the documentation under
