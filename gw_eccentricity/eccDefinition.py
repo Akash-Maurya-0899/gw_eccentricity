@@ -786,7 +786,7 @@ class eccDefinition:
     def get_default_extra_kwargs(self):
         """Defaults for additional kwargs."""
         default_extra_kwargs = {
-            "merger_times": None,
+            "merger_times": {"t_merger_zeroecc": None},
             "spline_kwargs": {},
             "extrema_finding_kwargs": {},  # Gets overridden in methods like
             # eccDefinitionUsingAmplitude
@@ -2061,9 +2061,8 @@ class eccDefinition:
             self.dataDict["amplm_zeroecc"], "amplm"
         )  # total amplitude
         if (
-            self.extra_kwargs is not None
-            and "merger_times" in self.extra_kwargs
-            and "t_merger_zeroecc" in self.extra_kwargs["merger_times"]
+            "t_merger_zeroecc" in self.extra_kwargs["merger_times"]
+            and self.extra_kwargs["merger_times"]["t_merger_zeroecc"] is not None
         ):
             self.t_merger_zeroecc = self.extra_kwargs["merger_times"][
                 "t_merger_zeroecc"
