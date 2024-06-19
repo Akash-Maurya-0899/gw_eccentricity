@@ -786,7 +786,7 @@ class eccDefinition:
     def get_default_extra_kwargs(self):
         """Defaults for additional kwargs."""
         default_extra_kwargs = {
-            "inspiral_only": None,
+            "merger_times": None,
             "spline_kwargs": {},
             "extrema_finding_kwargs": {},  # Gets overridden in methods like
             # eccDefinitionUsingAmplitude
