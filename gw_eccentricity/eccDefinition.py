@@ -604,8 +604,12 @@ class eccDefinition:
         # and to rescale amp22 by it's value at the merger (in AmplitudeFits)
         # respectively.
 
-        if extra_kwargs is not None and extra_kwargs["inspiral_only"]:
-            t_merger = newDataDict["t"][-1]
+        if (
+            extra_kwargs is not None
+            and "merger_times" in extra_kwargs
+            and "t_merger" in extra_kwargs["merger_times"]
+        ):
+            t_merger = extra_kwargs["merger_times"]["t_merger"]
         else:
             t_merger = peak_time_via_quadratic_fit(
                 newDataDict["t"],
@@ -2056,8 +2060,14 @@ class eccDefinition:
         amp = amplitude_using_all_modes(
             self.dataDict["amplm_zeroecc"], "amplm"
         )  # total amplitude
-        if self.extra_kwargs["inspiral_only"]:
-            self.t_merger_zeroecc = self.t_zeroecc[-1]
+        if (
+            self.extra_kwargs is not None
+            and "merger_times" in self.extra_kwargs
+            and "t_merger_zeroecc" in self.extra_kwargs["merger_times"]
+        ):
+            self.t_merger_zeroecc = self.extra_kwargs["merger_times"][
+                "t_merger_zeroecc"
+            ]
         else:
             self.t_merger_zeroecc = peak_time_via_quadratic_fit(self.t_zeroecc, amp)[0]
         self.t_zeroecc_shifted = self.t_zeroecc - self.t_merger_zeroecc + self.t_merger
